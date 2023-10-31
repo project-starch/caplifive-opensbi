@@ -20,7 +20,11 @@
 		PROVIDE(_text_start = .);
 		*(.entry)
 		*(.text)
+		. = ALIGN(4);
+		PROVIDE(_cap_text_start = .);
+		*(.cap_text)
 		. = ALIGN(8);
+		PROVIDE(_cap_text_end = .);
 		PROVIDE(_text_end = .);
 	}
 

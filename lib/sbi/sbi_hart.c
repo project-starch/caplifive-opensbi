@@ -1024,6 +1024,8 @@ void __attribute__((noreturn)) sbi_hart_hang(void)
 	__builtin_unreachable();
 }
 
+void __attribute__((noreturn)) sbi_capstone_init(unsigned long arg0, unsigned long arg1);
+
 void __attribute__((noreturn))
 sbi_hart_switch_mode(unsigned long arg0, unsigned long arg1,
 		     unsigned long next_addr, unsigned long next_mode,
@@ -1079,8 +1081,7 @@ sbi_hart_switch_mode(unsigned long arg0, unsigned long arg1,
 		}
 	}
 
-	register unsigned long a0 asm("a0") = arg0;
-	register unsigned long a1 asm("a1") = arg1;
-	__asm__ __volatile__("mret" : : "r"(a0), "r"(a1));
+
+	sbi_capstone_init(arg0, arg1);
 	__builtin_unreachable();
 }
