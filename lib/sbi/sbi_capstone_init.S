@@ -57,6 +57,10 @@ sbi_capstone_init_cap:
 
     CCSRRW(x0, CCSR_CIH, a4)
 
+    # delegate most of S- and U- mode H-interrupts
+    li t0, MIP_SSIP | MIP_STIP | MIP_SEIP | MIP_MTIP
+    csrw CSR_CID, t0
+
     # re-enable status; TODO: we should use a different interface for this?
     csrr s0, CSR_MSTATUS
     ori s0, s0, MSTATUS_MIE
@@ -124,7 +128,43 @@ _cap_trap_entry:
     SAVE_REG(t6, s0)
 
     csrr t0, mcause
+    # PRINT(t0)
 
+    srli t1, t0, 63
+    beq t1, x0, handle_trap
+
+    # handle interrupts
+    slli t0, t0, 1
+    srli t0, t0, 1
+
+    li t1, IRQ_M_TIMER
+    beq t0, t1, handle_int_mt
+
+    j handle_trap_fail
+
+handle_int_mt:
+    # clear the timer
+    # li t0, 0
+    # li t1, 0x100000000000
+    # GENCAP(a2, t0, t1)
+    # li t0, SBI_MTIME_ADDR
+    # SCC(a2, a2, t0)
+    # sd x0, 0(a2)
+
+    # li t0, 0x34567
+    # PRINT(t0)
+
+    li t0, MIP_MTIP
+    csrc mie, t0
+    # csrc mip, t0
+
+    # post to S mode
+    li t0, MIP_STIP
+    csrs mip, t0
+
+    j handle_int_ret_succ
+
+handle_trap:
     li t1, CAUSE_SUPERVISOR_ECALL
     beq t0, t1, handle_trap_ecall
 
@@ -134,6 +174,9 @@ handle_trap_ecall:
 
     li t0, SBI_EXT_BASE
     beq a7, t0, handle_base_ext
+
+    li t0, SBI_EXT_TIME
+    beq a7, t0, handle_time_ext
 
     j handle_trap_fail
 
@@ -179,6 +222,11 @@ handle_base_imp_version:
 
 handle_base_probe_ext:
     li a1, 0 # no extension supported
+    li t0, SBI_EXT_TIME
+    beq t0, a0, 1f
+    j handle_trap_ret_succ
+1:
+    li a1, 1
     j handle_trap_ret_succ
 
 handle_base_mvendorid:
@@ -194,15 +242,46 @@ handle_base_mimpid:
     csrr a1, marchid
     j handle_trap_ret_succ
 
-handle_trap_ret_succ:
-    SAVE_REG(a1, s0)
-    li a0, 0
-    SAVE_REG(a0, s0)
+handle_time_ext:
+    li t0, SBI_EXT_TIME_SET_TIMER
+    beq a6, t0, handle_time_set_time
+    j handle_trap_fail
 
+handle_time_set_time:
+    # we don't care about DoS for now
+    # also we just hack a capability
+    li t0, 0
+    li t1, 0x100000000000
+    GENCAP(a2, t0, t1)
+
+    # li t0, 0x123456
+    # PRINT(a0)
+
+    li t0, MIP_STIP
+    csrc mip, t0
+
+    # li t0, SBI_MTIME_ADDR
+    # SCC(a2, a2, t0)
+    # sd x0, 0(a2)
+
+    li t0, SBI_MTIMECMP_ADDR
+    SCC(a2, a2, t0)
+    sd a0, 0(a2)
+
+    li t0, MIP_MTIP
+    csrs mie, t0
+
+handle_trap_ret_succ:
     # increment EPC
     CCSRRW(t0, CCSR_CEPC, x0)
     addi t0, t0, 4
     CCSRRW(x0, CCSR_CEPC, t0)
+    li a0, 0
+    SAVE_REG(a1, s0)
+    SAVE_REG(a0, s0)
+
+handle_int_ret_succ:
+
 
 handle_trap_ret:
     RESTORE_REG(ra, s0)
@@ -246,15 +325,15 @@ handle_trap_fail:
     PRINT(a6)
     PRINT(a7)
 
+    csrr a0, mepc
+    PRINT(a0)
+
     li t0, 42
     PRINT(t0)
 1:
     j 1b
 
 _cap_int_entry:
-    # li a5, 42
-    # PRINT(a5)
-
     //lla s0, _cap_int_entry
     //RETURN(ra, s0)
     # CCSRRW(a1, CCSR_CEPC, x0)
@@ -262,38 +341,30 @@ _cap_int_entry:
     # CINCOFFSETIMM(a1, a1, 2)
     # PRINT(a1)
     # CCSRRW(x0, CCSR_CEPC, a1)
-    csrr t0, mcause
+    
+
+    # check CIC
+    csrr t0, CSR_CIC
     slli t0, t0, 1
     srli t0, t0, 1
 
     # ignore the external interrupts for now
-    li t1, 8
-    bge t0, t1, handle_int_external
 
-handle_int_fail:
-    PRINT(t0)
-
-    li s0, 32
-    PRINT(s0)
-
-    lla s0, _cap_int_entry
-    RETURN(ra, s0)
-1:
-    j 1b
-
-handle_int_external:
-    // just clear mip
-    PRINT(t0)
+    // clear cis
+    #PRINT(t0)
     li t1, 1
     sll t1, t1, t0
     not t1, t1
-    csrr t2, mip
+    csrr t2, CSR_CIS
     and t2, t2, t1
-    csrw mip, t2
+    csrw CSR_CIS, t2
 
 handle_int_ret:
+    # inject V-interrupt
+    li t1, 1
+    sll t1, t1, t0
     lla t0, _cap_int_entry
-    RETURN(ra, t0)
+    RETURN(ra, t0, t1)
 
 .section .data
 .align 4

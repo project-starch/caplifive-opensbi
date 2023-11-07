@@ -11,6 +11,7 @@
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_heap.h>
 #include <sbi/sbi_list.h>
+#include <sbi/sbi_console.h>
 #include <sbi_utils/fdt/fdt_helper.h>
 #include <sbi_utils/timer/fdt_timer.h>
 #include <sbi_utils/timer/aclint_mtimer.h>
@@ -83,6 +84,8 @@ static int timer_mtimer_cold_init(void *fdt, int nodeoff,
 		mt->mtimecmp_addr = addr[1];
 		mt->mtimecmp_size = size[1];
 	}
+
+	sbi_printf("Timer: mtime = 0x%lx, mtimecmp = 0x%lx\n", mt->mtime_addr, mt->mtimecmp_addr);
 
 	/* Check if MTIMER device has shared MTIME address */
 	if (mt->mtime_size) {

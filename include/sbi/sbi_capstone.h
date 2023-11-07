@@ -20,10 +20,14 @@
 #define CCSRRW(rd, ccsr, rs1) .insn i 0x5b, 0x7, rd, ccsr(rs1)
 #define SCC(rd, rs1, rs2) .insn r 0x5b, 0x1, 0x5, rd, rs1, rs2
 #define CALL(rd, rs1) .insn r 0x5b, 0x1, 0x20, rd, rs1, x0
-#define RETURN(rs1, rs2) .insn r 0x5b, 0x1, 0x21, x0, rs1, rs2
+#define RETURN(rd, rs1, rs2) .insn r 0x5b, 0x1, 0x21, rd, rs1, rs2
 #define CINCOFFSETIMM(rd, rs1, imm) .insn i 0x5b, 0x2, rd, imm(rs1)
 #define CINCOFFSET(rd, rs1, rs2) .insn r 0x5b, 0x1, 0xc, rd, rs1, rs2
 
+#define CSR_CIS          0x800
+#define CSR_CID			 0x801
+#define CSR_CIC          0x802
+#define CSR_OFFSETMMU	 0x803
 
 /** Index of zero member in sbi_trap_regs */
 #define SBI_TRAP_REGS_zero			0
@@ -90,6 +94,8 @@
 /** Index of t6 member in sbi_trap_regs */
 #define SBI_TRAP_REGS_t6			31
 
+// #define SAVE_REG(reg, creg) SDC(reg, creg, SBI_TRAP_REGS_ ## reg*8)
+// #define RESTORE_REG(reg, creg) LDC(reg, creg, SBI_TRAP_REGS_ ## reg*8)
 
 #define SAVE_REG(reg, creg) sd reg, SBI_TRAP_REGS_ ## reg*8(creg)
 #define RESTORE_REG(reg, creg) ld reg, SBI_TRAP_REGS_ ## reg*8(creg)
@@ -187,5 +193,8 @@
 #define SBI_EXT_PMU_COUNTER_FW_READ	0x5
 #define SBI_EXT_PMU_COUNTER_FW_READ_HI	0x6
 
+/* Assuming the following locations for the timer */
+#define SBI_MTIME_ADDR    0x200bff8
+#define SBI_MTIMECMP_ADDR 0x2004000
 
 #endif

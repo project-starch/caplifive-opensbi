@@ -17,18 +17,24 @@
 
 static int sbi_ecall_base_probe(unsigned long extid, unsigned long *out_val)
 {
-	struct sbi_ecall_extension *ext;
+	// struct sbi_ecall_extension *ext;
 
-	ext = sbi_ecall_find_extension(extid);
-	if (!ext) {
+	// ext = sbi_ecall_find_extension(extid);
+	// if (!ext) {
+	// 	*out_val = 0;
+	// 	return 0;
+	// }
+
+	// if (ext->probe)
+	// 	return ext->probe(extid, out_val);
+
+	// *out_val = 1;
+	
+	/* It seems that the time extension is required for Linux to work */
+	if (extid == SBI_EXT_TIME)
+		*out_val = 1;
+	else
 		*out_val = 0;
-		return 0;
-	}
-
-	if (ext->probe)
-		return ext->probe(extid, out_val);
-
-	*out_val = 1;
 	return 0;
 }
 
