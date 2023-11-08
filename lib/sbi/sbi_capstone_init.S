@@ -58,7 +58,7 @@ sbi_capstone_init_cap:
     CCSRRW(x0, CCSR_CIH, a4)
 
     # delegate most of S- and U- mode H-interrupts
-    li t0, MIP_SSIP | MIP_STIP | MIP_SEIP | MIP_MTIP
+    li t0, MIP_SSIP | MIP_STIP | MIP_SEIP # | MIP_MTIP
     csrw CSR_CID, t0
 
     # re-enable status; TODO: we should use a different interface for this?
@@ -157,6 +157,13 @@ handle_int_mt:
     li t0, MIP_MTIP
     csrc mie, t0
     # csrc mip, t0
+
+#     csrr t0, mip    
+#     andi t0, t0, MIP_MTIP
+#     PRINT(t0)
+# 1:
+#     j 1b
+
 
     # post to S mode
     li t0, MIP_STIP
@@ -257,7 +264,7 @@ handle_time_set_time:
     # li t0, 0x123456
     # PRINT(a0)
 
-    li t0, MIP_STIP
+    li t0, MIP_STIP | MIP_MTIP # TODO: we have to clear MTIP manually
     csrc mip, t0
 
     # li t0, SBI_MTIME_ADDR
@@ -351,7 +358,7 @@ _cap_int_entry:
     # ignore the external interrupts for now
 
     // clear cis
-    #PRINT(t0)
+    # PRINT(t0)
     li t1, 1
     sll t1, t1, t0
     not t1, t1
