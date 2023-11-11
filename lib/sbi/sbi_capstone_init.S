@@ -50,7 +50,49 @@ sbi_capstone_init_cap:
     lla s1, int_handler_seal_region_end
     GENCAP(a4, s0, s1)
 
+    # store PC
     STC(a3, a4, 0)
+    CINCOFFSETIMM(a4, a4, 16)
+
+#define SAVE_REG_16(x) sd x, 0(a4); sd x, 8(a4); CINCOFFSETIMM(a4, a4, 16)
+#define SAVE_REG_8(x) sd x, 0(a4); CINCOFFSETIMM(a4, a4, 8)
+#define SAVE_CSR(x) csrr t0, x; sd t0, 0(a4); CINCOFFSETIMM(a4, a4, 8)
+
+    # GPRs x 31 + CCSRs x 4
+    li t1, 31 + 4
+1:
+    addi t1, t1, -1
+    SAVE_REG_16(x0)
+    bne t1, x0, 1b
+
+    # CSRs
+    csrr t0, mstatus
+    li t1, 3
+    slli t1, t1, 38
+    or t0, t0, t1
+    SAVE_REG_8(t0)
+
+    SAVE_CSR(mideleg)
+    SAVE_CSR(medeleg)
+    SAVE_CSR(mip)
+    SAVE_CSR(mie)
+    SAVE_CSR(mcause)
+    SAVE_CSR(mtval)
+    SAVE_REG_8(x0) # mtval2 is not available?
+    SAVE_REG_8(x0) # mtinst is not available?
+    SAVE_CSR(stvec)
+    SAVE_CSR(scause)
+    SAVE_CSR(stval)
+    SAVE_CSR(sepc)
+    SAVE_CSR(sscratch)
+    SAVE_CSR(satp)
+
+    SAVE_CSR(CSR_OFFSETMMU)
+
+#undef SAVE_CSR
+#undef SAVE_REG_8
+#undef SAVE_REG_16
+
     SEAL(a4, a4)
 
     PRINT(a4)
@@ -376,13 +418,13 @@ handle_int_ret:
 .section .data
 .align 4
 int_handler_seal_region:
-.zero 16 * 40
+.zero 16 * 64
 .align 4
 int_handler_seal_region_end:
 
 .align 4
 scratch_region:
-.zero 16 * 40
+.zero 16 * 64
 .align 4
 scratch_region_end:
 
