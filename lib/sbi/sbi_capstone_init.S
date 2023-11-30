@@ -32,18 +32,12 @@ sbi_capstone_init:
 sbi_capstone_init_cap:
     # TODO: this should in the end come from the genesis capability
 #ifdef CAPSTONE_ENTER_C
-    li s0, 0
-    li s1, 0x100000000000
-    GENCAP(a2, s0, s1)
-
     # a3 = trap vector PC cap
     lla s0, _cap_text_start
     lla s1, _cap_text_end
     GENCAP(a3, s0, s1)
-    lla s0, _cap_int_entry
+    lla s0, _handle_hw_int_entry
     SCC(a3, a3, s0)
-
-    PRINT(s0)
 
     # a4 = seal region
     lla s0, int_handler_seal_region
@@ -94,9 +88,6 @@ sbi_capstone_init_cap:
 #undef SAVE_REG_16
 
     SEAL(a4, a4)
-
-    PRINT(a4)
-
     CCSRRW(x0, CCSR_CIH, a4)
 
     # delegate most of S- and U- mode H-interrupts
@@ -108,16 +99,6 @@ sbi_capstone_init_cap:
     ori s0, s0, MSTATUS_MIE
     csrw CSR_MSTATUS, s0
 
-    // FIXME: we play with the C mode first
-    PRINT(a3)
-    PRINT(a4)
-
-    
-    // we just call into a4 instead of setting it up as a handler
-    # CALL(a4, a4)
-
-    # CALL(a4, a4)
-
     lla s0, _cap_text_start
     lla s1, _cap_text_end
     GENCAP(a3, s0, s1)
@@ -125,9 +106,30 @@ sbi_capstone_init_cap:
     SCC(a3, a3, s0)
     CCSRRW(x0, CCSR_CTVEC, a3)
 
-    lla s0, scratch_region
-    lla s1, scratch_region_end
+    # set up the global capability table
+    lla s0, global_cap_table
+    lla s1, global_cap_table_end
+    GENCAP(a5, s0, s1)
+    SCC(a5, a5, s0)
+
+    li s0, SBI_MTIME_ADDR
+    addi s1, s0, 8
+    GENCAP(a4, s0, s1)
+    SCC(a4, a4, s0)
+    STC(a4, a5, 0)
+
+    li s0, SBI_MTIMECMP_ADDR
+    addi s1, s0, 8
+    GENCAP(a4, s0, s1)
+    SCC(a4, a4, s0)
+    STC(a4, a5, 16)
+
+    lla s0, dom_stack
+    lla s1, dom_stack_end
     GENCAP(a3, s0, s1)
+    SCC(a3, a3, s1)
+    STC(a5, a3, -16) # store the cap to the global cap table at the bottom of the stack
+    
     CCSRRW(x0, CCSR_CSCRATCH, a3)
 
 #endif
@@ -135,263 +137,122 @@ sbi_capstone_init_cap:
     mret
 
 _cap_trap_entry:
-    CCSRRW(s0, CCSR_CSCRATCH, s0)
-    # now s0 is the scratch region
+    CCSRRW(sp, CCSR_CSCRATCH, sp)
+
+    CINCOFFSETIMM(sp, sp, -34 * 8)
+    # set up stack
     # save context. TODO: assuming that there is no GPR containing a capability
-    SAVE_REG(ra, s0)
-    SAVE_REG(sp, s0)
-    SAVE_REG(gp, s0)
-    SAVE_REG(tp, s0)
-    SAVE_REG(t0, s0)
-    SAVE_REG(t1, s0)
-    SAVE_REG(t2, s0)
-    SAVE_REG(s1, s0)
-    SAVE_REG(a0, s0)
-    SAVE_REG(a1, s0)
-    SAVE_REG(a2, s0)
-    SAVE_REG(a3, s0)
-    SAVE_REG(a4, s0)
-    SAVE_REG(a5, s0)
-    SAVE_REG(a6, s0)
-    SAVE_REG(a7, s0)
-    SAVE_REG(s2, s0)
-    SAVE_REG(s3, s0)
-    SAVE_REG(s4, s0)
-    SAVE_REG(s5, s0)
-    SAVE_REG(s6, s0)
-    SAVE_REG(s7, s0)
-    SAVE_REG(s8, s0)
-    SAVE_REG(s9, s0)
-    SAVE_REG(s10, s0)
-    SAVE_REG(s11, s0)
-    SAVE_REG(t3, s0)
-    SAVE_REG(t4, s0)
-    SAVE_REG(t5, s0)
-    SAVE_REG(t6, s0)
+    SAVE_REG(ra, sp)
+    SAVE_REG(gp, sp)
+    SAVE_REG(tp, sp)
+    SAVE_REG(t0, sp)
+    SAVE_REG(t1, sp)
+    SAVE_REG(t2, sp)
+    SAVE_REG(s0, sp)
+    SAVE_REG(s1, sp)
+    SAVE_REG(a0, sp)
+    SAVE_REG(a1, sp)
+    SAVE_REG(a2, sp)
+    SAVE_REG(a3, sp)
+    SAVE_REG(a4, sp)
+    SAVE_REG(a5, sp)
+    SAVE_REG(a6, sp)
+    SAVE_REG(a7, sp)
+    SAVE_REG(s2, sp)
+    SAVE_REG(s3, sp)
+    SAVE_REG(s4, sp)
+    SAVE_REG(s5, sp)
+    SAVE_REG(s6, sp)
+    SAVE_REG(s7, sp)
+    SAVE_REG(s8, sp)
+    SAVE_REG(s9, sp)
+    SAVE_REG(s10, sp)
+    SAVE_REG(s11, sp)
+    SAVE_REG(t3, sp)
+    SAVE_REG(t4, sp)
+    SAVE_REG(t5, sp)
+    SAVE_REG(t6, sp)
+
+    LDC(gp, sp, 32 * 8)
+
 
     csrr t0, mcause
-    # PRINT(t0)
 
     srli t1, t0, 63
-    beq t1, x0, handle_trap
-
-    # handle interrupts
-    slli t0, t0, 1
-    srli t0, t0, 1
-
-    li t1, IRQ_M_TIMER
-    beq t0, t1, handle_int_mt
-
-    j handle_trap_fail
-
-handle_int_mt:
-    # clear the timer
-    # li t0, 0
-    # li t1, 0x100000000000
-    # GENCAP(a2, t0, t1)
-    # li t0, SBI_MTIME_ADDR
-    # SCC(a2, a2, t0)
-    # sd x0, 0(a2)
-
-    # li t0, 0x34567
-    # PRINT(t0)
-
-    li t0, MIP_MTIP
-    csrc mie, t0
-    # csrc mip, t0
-
-#     csrr t0, mip    
-#     andi t0, t0, MIP_MTIP
-#     PRINT(t0)
-# 1:
-#     j 1b
-
-
-    # post to S mode
-    li t0, MIP_STIP
-    csrs mip, t0
-
-    j handle_int_ret_succ
-
-handle_trap:
+    bne t1, x0, 1f
     li t1, CAUSE_SUPERVISOR_ECALL
-    beq t0, t1, handle_trap_ecall
+    bne t0, t1, 2f
 
-    j handle_trap_fail
+    # func parameters
+    # we allow up to two parameters for the SBI fucntion call itself
+    mv a2, a7
+    mv a3, a6
+    call handle_trap_ecall
+    mv a1, a0
+    li a0, 0
 
-handle_trap_ecall:
-
-    li t0, SBI_EXT_BASE
-    beq a7, t0, handle_base_ext
-
-    li t0, SBI_EXT_TIME
-    beq a7, t0, handle_time_ext
-
-    j handle_trap_fail
-
-
-handle_base_ext:
-# very bruteforce implementation
-    li t0, SBI_EXT_BASE_GET_SPEC_VERSION
-    beq a6, t0, handle_base_version
-
-    li t0, SBI_EXT_BASE_GET_IMP_ID
-    beq a6, t0, handle_base_imp_id
-
-    li t0, SBI_EXT_BASE_GET_IMP_VERSION
-    beq a6, t0, handle_base_imp_version
-
-    li t0, SBI_EXT_BASE_PROBE_EXT
-    beq a6, t0, handle_base_probe_ext
-
-    li t0, SBI_EXT_BASE_GET_MVENDORID
-    beq a6, t0, handle_base_mvendorid
-
-    li t0, SBI_EXT_BASE_GET_MARCHID
-    beq a6, t0, handle_base_marchid
-
-    li t0, SBI_EXT_BASE_GET_MIMPID
-    beq a6, t0, handle_base_mimpid
-
-    j handle_trap_fail
-
-# the following handlers assume that the a0 and a1 contain the original values
-
-handle_base_version:
-    li a1, SBI_SPEC_VERSION
-    j handle_trap_ret_succ
-
-handle_base_imp_id:
-    li a1, 0
-    j handle_trap_ret_succ
-
-handle_base_imp_version:
-    li a1, 0
-    j handle_trap_ret_succ
-
-handle_base_probe_ext:
-    li a1, 0 # no extension supported
-    li t0, SBI_EXT_TIME
-    beq t0, a0, 1f
-    j handle_trap_ret_succ
-1:
-    li a1, 1
-    j handle_trap_ret_succ
-
-handle_base_mvendorid:
-    # let's allow this for now
-    csrr a1, mvendorid
-    j handle_trap_ret_succ
-
-handle_base_marchid:
-    csrr a1, marchid
-    j handle_trap_ret_succ
-
-handle_base_mimpid:
-    csrr a1, marchid
-    j handle_trap_ret_succ
-
-handle_time_ext:
-    li t0, SBI_EXT_TIME_SET_TIMER
-    beq a6, t0, handle_time_set_time
-    j handle_trap_fail
-
-handle_time_set_time:
-    # we don't care about DoS for now
-    # also we just hack a capability
-    li t0, 0
-    li t1, 0x100000000000
-    GENCAP(a2, t0, t1)
-
-    # li t0, 0x123456
-    # PRINT(a0)
-
-    li t0, MIP_STIP | MIP_MTIP # TODO: we have to clear MTIP manually
-    csrc mip, t0
-
-    # li t0, SBI_MTIME_ADDR
-    # SCC(a2, a2, t0)
-    # sd x0, 0(a2)
-
-    li t0, SBI_MTIMECMP_ADDR
-    SCC(a2, a2, t0)
-    sd a0, 0(a2)
-
-    li t0, MIP_MTIP
-    csrs mie, t0
-
-handle_trap_ret_succ:
-    # increment EPC
     CCSRRW(t0, CCSR_CEPC, x0)
     addi t0, t0, 4
     CCSRRW(x0, CCSR_CEPC, t0)
-    li a0, 0
-    SAVE_REG(a1, s0)
-    SAVE_REG(a0, s0)
 
-handle_int_ret_succ:
+    j return_to_sumode
+
+2:
+    j 2b
+
+1:
+    # handle interrupts
+    slli t0, t0, 1
+    srli a0, t0, 1
+
+    call handle_interrupt
+
+    RESTORE_REG(a0, sp)
+    RESTORE_REG(a1, sp)
+
+return_to_sumode:
 
 
-handle_trap_ret:
-    RESTORE_REG(ra, s0)
-    RESTORE_REG(sp, s0)
-    RESTORE_REG(gp, s0)
-    RESTORE_REG(tp, s0)
-    RESTORE_REG(t0, s0)
-    RESTORE_REG(t1, s0)
-    RESTORE_REG(t2, s0)
-    RESTORE_REG(s1, s0)
-    RESTORE_REG(a0, s0)
-    RESTORE_REG(a1, s0)
-    RESTORE_REG(a2, s0)
-    RESTORE_REG(a3, s0)
-    RESTORE_REG(a4, s0)
-    RESTORE_REG(a5, s0)
-    RESTORE_REG(a6, s0)
-    RESTORE_REG(a7, s0)
-    RESTORE_REG(s2, s0)
-    RESTORE_REG(s3, s0)
-    RESTORE_REG(s4, s0)
-    RESTORE_REG(s5, s0)
-    RESTORE_REG(s6, s0)
-    RESTORE_REG(s7, s0)
-    RESTORE_REG(s8, s0)
-    RESTORE_REG(s9, s0)
-    RESTORE_REG(s10, s0)
-    RESTORE_REG(s11, s0)
-    RESTORE_REG(t3, s0)
-    RESTORE_REG(t4, s0)
-    RESTORE_REG(t5, s0)
-    RESTORE_REG(t6, s0)
+    STC(gp, sp, 32 * 8)
 
-    CCSRRW(s0, CCSR_CSCRATCH, s0)
+    RESTORE_REG(ra, sp)
+    RESTORE_REG(gp, sp)
+    RESTORE_REG(tp, sp)
+    RESTORE_REG(t0, sp)
+    RESTORE_REG(t1, sp)
+    RESTORE_REG(t2, sp)
+    RESTORE_REG(s0, sp)
+    RESTORE_REG(s1, sp)
+    RESTORE_REG(a2, sp)
+    RESTORE_REG(a3, sp)
+    RESTORE_REG(a4, sp)
+    RESTORE_REG(a5, sp)
+    RESTORE_REG(a6, sp)
+    RESTORE_REG(a7, sp)
+    RESTORE_REG(s2, sp)
+    RESTORE_REG(s3, sp)
+    RESTORE_REG(s4, sp)
+    RESTORE_REG(s5, sp)
+    RESTORE_REG(s6, sp)
+    RESTORE_REG(s7, sp)
+    RESTORE_REG(s8, sp)
+    RESTORE_REG(s9, sp)
+    RESTORE_REG(s10, sp)
+    RESTORE_REG(s11, sp)
+    RESTORE_REG(t3, sp)
+    RESTORE_REG(t4, sp)
+    RESTORE_REG(t5, sp)
+    RESTORE_REG(t6, sp)
+
+    CINCOFFSETIMM(sp, sp, 34 * 8)
+
+    CCSRRW(sp, CCSR_CSCRATCH, sp)
 
     mret
 
-handle_trap_fail:
-    RESTORE_REG(a6, s0)
-    RESTORE_REG(a7, s0)
-    PRINT(a6)
-    PRINT(a7)
+# hardware interrupt
 
-    csrr a0, mepc
-    PRINT(a0)
-
-    li t0, 42
-    PRINT(t0)
-1:
-    j 1b
-
-_cap_int_entry:
-    //lla s0, _cap_int_entry
-    //RETURN(ra, s0)
-    # CCSRRW(a1, CCSR_CEPC, x0)
-    # PRINT(a1)
-    # CINCOFFSETIMM(a1, a1, 2)
-    # PRINT(a1)
-    # CCSRRW(x0, CCSR_CEPC, a1)
-    
-
+_handle_hw_int_entry:
     # check CIC
     csrr t0, CSR_CIC
     slli t0, t0, 1
@@ -399,8 +260,7 @@ _cap_int_entry:
 
     # ignore the external interrupts for now
 
-    // clear cis
-    # PRINT(t0)
+    # clear cis
     li t1, 1
     sll t1, t1, t0
     not t1, t1
@@ -408,11 +268,11 @@ _cap_int_entry:
     and t2, t2, t1
     csrw CSR_CIS, t2
 
-handle_int_ret:
+# handle_int_ret:
     # inject V-interrupt
     li t1, 1
     sll t1, t1, t0
-    lla t0, _cap_int_entry
+    lla t0, _handle_hw_int_entry
     RETURN(ra, t0, t1)
 
 .section .data
@@ -423,8 +283,16 @@ int_handler_seal_region:
 int_handler_seal_region_end:
 
 .align 4
-scratch_region:
-.zero 16 * 64
+dom_stack:
+.zero 4096 * 8
 .align 4
-scratch_region_end:
+dom_stack_end:
 
+
+.align 4
+global_cap_table:
+.zero 16 * 2
+global_cap_table_end:
+
+
+#include "sbi_capstone.S"
