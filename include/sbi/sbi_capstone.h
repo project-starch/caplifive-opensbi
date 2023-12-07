@@ -3,6 +3,8 @@
 
 #define SBI_SPEC_VERSION (1 << 24)
 
+/* Capstone-specific definitions */
+
 #define CCSR_CTVEC    0x0
 #define CCSR_CIH    0x1
 #define CCSR_CEPC  0x2
@@ -28,6 +30,8 @@
 #define CSR_CID			 0x801
 #define CSR_CIC          0x802
 #define CSR_OFFSETMMU	 0x803
+
+#define SBI_EXT_CAPSTONE 0x12345678
 
 /** Index of zero member in sbi_trap_regs */
 #define SBI_TRAP_REGS_zero			0

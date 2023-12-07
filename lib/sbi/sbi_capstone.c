@@ -53,6 +53,9 @@ unsigned handle_trap_ecall(unsigned arg0, unsigned arg1,
                 err = 1;
             }
             break;
+        case SBI_EXT_CAPSTONE:
+            res = 42;
+            break;
         default:
             err = 1;
     }
