@@ -5,11 +5,11 @@
 
 /* Capstone-specific definitions */
 
-#define CCSR_CTVEC    0x0
-#define CCSR_CIH    0x1
-#define CCSR_CEPC  0x2
-#define CCSR_CMMU    0x3
-#define CCSR_CSCRATCH   0x4
+#define CCSR_CTVEC    0
+#define CCSR_CIH    1
+#define CCSR_CEPC  2
+#define CCSR_CMMU    3
+#define CCSR_CSCRATCH   4
 
 #define SETCAPMEM(reg) .insn r 0x5b, 0x1, 0x41, x0, reg, x0
 #define OFFCAPMEM      .insn r 0x5b, 0x1, 0x41, x0, x0, x0
@@ -31,7 +31,11 @@
 #define CSR_CIC          0x802
 #define CSR_OFFSETMMU	 0x803
 
+/* Capstone SBI */
+
 #define SBI_EXT_CAPSTONE 0x12345678
+
+#define SBI_EXT_CAPSTONE_DOM_CREATE 0x0
 
 /** Index of zero member in sbi_trap_regs */
 #define SBI_TRAP_REGS_zero			0

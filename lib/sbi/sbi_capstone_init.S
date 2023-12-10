@@ -183,10 +183,6 @@ _cap_trap_entry:
     li t1, CAUSE_SUPERVISOR_ECALL
     bne t0, t1, 2f
 
-    # func parameters
-    # we allow up to two parameters for the SBI fucntion call itself
-    mv a2, a7
-    mv a3, a6
     call handle_trap_ecall
     mv a1, a0
     li a0, 0
