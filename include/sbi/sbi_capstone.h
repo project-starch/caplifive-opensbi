@@ -25,6 +25,7 @@
 #define RETURN(rd, rs1, rs2) .insn r 0x5b, 0x1, 0x21, rd, rs1, rs2
 #define CINCOFFSETIMM(rd, rs1, imm) .insn i 0x5b, 0x2, rd, imm(rs1)
 #define CINCOFFSET(rd, rs1, rs2) .insn r 0x5b, 0x1, 0xc, rd, rs1, rs2
+#define DELIN(rd)     .insn r 0x5b, 0x1, 0x3, rd, x0, x0
 
 #define CSR_CIS          0x800
 #define CSR_CID			 0x801

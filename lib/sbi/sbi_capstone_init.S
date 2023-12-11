@@ -128,9 +128,16 @@ sbi_capstone_init_cap:
     lla s1, dom_stack_end
     GENCAP(a3, s0, s1)
     SCC(a3, a3, s1)
+    DELIN(a3) # conforming to the ABI
     STC(a5, a3, -16) # store the cap to the global cap table at the bottom of the stack
     
     CCSRRW(x0, CCSR_CSCRATCH, a3)
+    li a3, 0
+
+    # li s0, 0
+    # li s0, 0x10000000000
+    # GENCAP(a3, s0, s1)
+    # CCSRRW(x0, CCSR_CMMU, a3)
 
 #endif
 

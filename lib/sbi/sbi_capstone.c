@@ -13,10 +13,12 @@
 #define __domasync __attribute__((domasync))
 #define __domentry __attribute__((domentry))
 
-#define READ_CSR(csr_name, v) __asm__("csrr %0, " #csr_name : "=r"(v))
-#define READ_CCSR(ccsr_name, v) __asm__("ccsrrw(%0, " #ccsr_name ", x0)" : "=r"(v))
-#define WRITE_CCSR(ccsr_name, v) __asm__("ccsrrw(x0, " #ccsr_name ", %0)" :: "r"(v))
-#define PRINT(v) __asm__ volatile(".insn r 0x5b, 0x1, 0x43, x0, %0, x0" :: "r"(v))
+#define C_READ_CSR(csr_name, v) __asm__("csrr %0, " #csr_name : "=r"(v))
+#define C_READ_CCSR(ccsr_name, v) __asm__("ccsrrw(%0, " #ccsr_name ", x0)" : "=r"(v))
+#define C_WRITE_CCSR(ccsr_name, v) __asm__("ccsrrw(x0, " #ccsr_name ", %0)" :: "r"(v))
+#define C_SET_CURSOR(dest, cap, cursor) __asm__("scc(%0, %1, %2)" : "=r"(dest) : "r"(cap), "r"(cursor))
+#define C_PRINT(v) __asm__ volatile(".insn r 0x5b, 0x1, 0x43, x0, %0, x0" :: "r"(v))
+#define C_GEN_CAP(dest, base, end) __asm__(".insn r 0x5b, 0x1, 0x40, %0, %1, %2" : "=r"(dest) : "r"(base), "r"(end));
 
 unsigned mtime;
 unsigned mtimecmp;
@@ -27,30 +29,42 @@ static unsigned create_domain(unsigned base_addr, unsigned code_size,
     // alignment requirement
     code_size = (((code_size - 1) >> 4) + 1) << 4;
     __linear void *mem_l, *dom_code, *dom_data, *mem_r;
-    __linear unsigned *dom_seal;
-    READ_CCSR(CCSR_CMMU, mem_l);
-    PRINT(mem_l);
+    __linear void **dom_seal;
+    // READ_CCSR(cmmu, mem_l);
+
+    // FIXME: cmmu is not working properly; we cheat for now
+    // mint a capability for the memory region
+    C_GEN_CAP(dom_code, base_addr, base_addr + tot_size);
+
     // dom_code = __split(mem_l, base_addr);
     // mem_r = __split(dom_code, base_addr + tot_size);
 
-    // dom_seal = __split(dom_code, base_addr + code_size);
-    // dom_data = __split(dom_seal, base_addr + code_size + (16 * 64));
-    
-    // int i;
-    // for(i = 0; i < 64; i += 1) {
-    //     dom_seal[i] = 0;
-    // }
-    // // construct the sealed region of the domain
-    // dom_seal[0] = dom_code;
-    // dom_seal[2] = dom_data;
+    dom_seal = __split(dom_code, base_addr + code_size);
+    dom_data = __split(dom_seal, base_addr + code_size + (16 * 64));
 
-    // __dom void *dom = __seal(dom_seal);
+    int i;
+    for(i = 0; i < 64; i += 1) {
+        dom_seal[i] = 0;
+    }
 
-    // TODO: save mem_r somewhere
+    C_SET_CURSOR(dom_code, dom_code, base_addr + entry_offset);
 
-    WRITE_CCSR(CCSR_CMMU, mem_l);
+    // construct the sealed region of the domain
+    dom_seal[0] = dom_code;
+    dom_seal[2] = dom_data;
+    dom_seal[3] = 3 << 34;
 
-    return entry_offset;
+    __dom void *dom = __seal(dom_seal);
+
+    // PRINT(dom);
+
+    unsigned res;
+    __domcall(dom, &res);
+
+    // WRITE_CCSR(cmmu, mem_l);
+
+
+    return res;
 }
 
 // SBI implementation
@@ -76,13 +90,13 @@ unsigned handle_trap_ecall(unsigned arg0, unsigned arg1,
                     res = arg0 == SBI_EXT_TIME;
                     break;
                 case SBI_EXT_BASE_GET_MVENDORID:
-                    READ_CSR(mvendorid, res);
+                    C_READ_CSR(mvendorid, res);
                     break;
                 case SBI_EXT_BASE_GET_MARCHID:
-                    READ_CSR(marchid, res);
+                    C_READ_CSR(marchid, res);
                     break;
                 case SBI_EXT_BASE_GET_MIMPID:
-                    READ_CSR(mimpid, res);
+                    C_READ_CSR(mimpid, res);
                     break;
                 default:
                     err = 1;
