@@ -32,11 +32,15 @@
 #define CSR_CIC          0x802
 #define CSR_OFFSETMMU	 0x803
 
+
+#define CAPSTONE_MAX_DOM_N   64
+
 /* Capstone SBI */
 
 #define SBI_EXT_CAPSTONE 0x12345678
 
 #define SBI_EXT_CAPSTONE_DOM_CREATE 0x0
+#define SBI_EXT_CAPSTONE_DOM_CALL   0x1
 
 /** Index of zero member in sbi_trap_regs */
 #define SBI_TRAP_REGS_zero			0

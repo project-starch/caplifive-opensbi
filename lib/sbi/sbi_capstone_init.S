@@ -124,6 +124,19 @@ sbi_capstone_init_cap:
     SCC(a4, a4, s0)
     STC(a4, a5, 16)
 
+    lla s0, domains
+    lla s1, domains_end
+    GENCAP(a4, s0, s1)
+    SCC(a4, a4, s0)
+    STC(a4, a5, 32)
+
+    lla s0, dom_n
+    lla s1, dom_n_end
+    GENCAP(a4, s0, s1)
+    SCC(a4, a4, s0)
+    sd x0, 0(a4)
+    STC(a4, a5, 48)
+
     lla s0, dom_stack
     lla s1, dom_stack_end
     GENCAP(a3, s0, s1)
@@ -293,9 +306,18 @@ dom_stack_end:
 
 
 .align 4
-global_cap_table:
-.zero 16 * 2
-global_cap_table_end:
+domains:
+.zero 16 * CAPSTONE_MAX_DOM_N
+domains_end:
 
+.align 4
+dom_n:
+.zero 8
+dom_n_end:
+
+.align 4
+global_cap_table:
+.zero 16 * 4
+global_cap_table_end:
 
 #include "sbi_capstone.S"

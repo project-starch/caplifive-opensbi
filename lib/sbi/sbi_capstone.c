@@ -20,8 +20,12 @@
 #define C_PRINT(v) __asm__ volatile(".insn r 0x5b, 0x1, 0x43, x0, %0, x0" :: "r"(v))
 #define C_GEN_CAP(dest, base, end) __asm__(".insn r 0x5b, 0x1, 0x40, %0, %1, %2" : "=r"(dest) : "r"(base), "r"(end));
 
+
 unsigned mtime;
 unsigned mtimecmp;
+
+__dom void* domains[CAPSTONE_MAX_DOM_N];
+unsigned dom_n;
 
 static unsigned create_domain(unsigned base_addr, unsigned code_size,
                           unsigned tot_size, unsigned entry_offset)
@@ -58,11 +62,23 @@ static unsigned create_domain(unsigned base_addr, unsigned code_size,
 
     // PRINT(dom);
 
-    unsigned res;
-    __domcall(dom, &res);
+    domains[dom_n] = dom;
+
+    dom_n += 1;
 
     // WRITE_CCSR(cmmu, mem_l);
 
+
+    return dom_n - 1;
+}
+
+static unsigned call_domain(unsigned dom_id) {
+    if(dom_id >= dom_n) {
+        return -1;
+    }
+    
+    unsigned res;
+    __domcall(domains[dom_id], &res);
 
     return res;
 }
@@ -115,6 +131,9 @@ unsigned handle_trap_ecall(unsigned arg0, unsigned arg1,
             switch(func_code) {
                 case SBI_EXT_CAPSTONE_DOM_CREATE:
                     res = create_domain(arg0, arg1, arg2, arg3);
+                    break;
+                case SBI_EXT_CAPSTONE_DOM_CALL:
+                    res = call_domain(arg0);
                     break;
                 default:
                     err = 1;
