@@ -83,6 +83,16 @@ static unsigned call_domain(unsigned dom_id) {
     return res;
 }
 
+static unsigned call_domain_with_cap(unsigned dom_id, unsigned base, unsigned len, unsigned cursor) {
+    __linear void *region;
+    C_GEN_CAP(region, base, base + len);
+    __asm__ ("scc(%0, %1, %2)" : "=r"(region) : "r"(region), "r"(cursor));
+
+    __domcall(domains[dom_id], region);
+
+    return 0;
+}
+
 // SBI implementation
 unsigned handle_trap_ecall(unsigned arg0, unsigned arg1,
                            unsigned arg2, unsigned arg3,
@@ -134,6 +144,9 @@ unsigned handle_trap_ecall(unsigned arg0, unsigned arg1,
                     break;
                 case SBI_EXT_CAPSTONE_DOM_CALL:
                     res = call_domain(arg0);
+                    break;
+                case SBI_EXT_CAPSTONE_DOM_CALL_WITH_CAP:
+                    res = call_domain_with_cap(arg0, arg1, arg2, arg3);
                     break;
                 default:
                     err = 1;

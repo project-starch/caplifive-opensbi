@@ -41,6 +41,7 @@
 
 #define SBI_EXT_CAPSTONE_DOM_CREATE 0x0
 #define SBI_EXT_CAPSTONE_DOM_CALL   0x1
+#define SBI_EXT_CAPSTONE_DOM_CALL_WITH_CAP   0x2
 
 /** Index of zero member in sbi_trap_regs */
 #define SBI_TRAP_REGS_zero			0
