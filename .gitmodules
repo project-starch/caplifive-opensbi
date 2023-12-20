@@ -1,0 +1,3 @@
+[submodule "lib/sbi/capstone-sbi"]
+	path = lib/sbi/capstone-sbi
+	url = https://github.com/project-starch/capstone-sbi.git
