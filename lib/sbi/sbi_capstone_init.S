@@ -1,5 +1,4 @@
-#include <sbi/riscv_encoding.h>
-#include <sbi/sbi_capstone.h>
+#include "capstone-sbi/sbi_capstone.h"
 
 #define CAPSTONE_ENTER_C
 
@@ -8,12 +7,12 @@
 .global sbi_capstone_init
 sbi_capstone_init:
     # disable interrupts
-    csrr s0, CSR_MSTATUS
+    csrr s0, mstatus
     li s1, -1
     xori s1, s1, MSTATUS_MIE
     and s0, s0, s1
     csrr s2, mepc
-    csrw CSR_MSTATUS, s0
+    csrw mstatus, s0
 
     # enter C mode
     # TODO: this is supposed to invalidate all CSR setups
@@ -95,9 +94,9 @@ sbi_capstone_init_cap:
     csrw CSR_CID, t0
 
     # re-enable status; TODO: we should use a different interface for this?
-    csrr s0, CSR_MSTATUS
+    csrr s0, mstatus
     ori s0, s0, MSTATUS_MIE
-    csrw CSR_MSTATUS, s0
+    csrw mstatus, s0
 
     lla s0, _cap_text_start
     lla s1, _cap_text_end
