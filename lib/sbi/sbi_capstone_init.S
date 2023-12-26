@@ -135,6 +135,7 @@ sbi_capstone_init_cap:
     SETUP_CAPTAB_ENTRY(dom_n, 4)
     SETUP_CAPTAB_ENTRY(region_n, 5)
     SETUP_CAPTAB_ENTRY(caller_dom, 6)
+    SETUP_CAPTAB_ENTRY(caller_buf, 7)
 
 #undef SETUP_CAPTAB_ENTRY
 
@@ -148,10 +149,11 @@ sbi_capstone_init_cap:
     CCSRRW(x0, CCSR_CSCRATCH, a3)
     li a3, 0
 
-    # li s0, 0
-    # li s0, 0x10000000000
-    # GENCAP(a3, s0, s1)
-    # CCSRRW(x0, CCSR_CMMU, a3)
+    li s0, 0
+    li s1, 0x10000000000
+    GENCAP(a3, s0, s1)
+    CCSRRW(x0, CCSR_CMMU, a3)
+    li a3, 0
 
 #endif
 
@@ -211,7 +213,7 @@ DEF_REGION(dom_n, 8)
 DEF_REGION(region_n, 8)
 DEF_REGION(caller_dom, 16)
 DEF_REGION(caller_buf, 16)
-DEF_REGION(global_cap_table, 16 * 7)
+DEF_REGION(global_cap_table, 16 * 8)
 
 #undef DEF_REGION
 
