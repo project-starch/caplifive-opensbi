@@ -123,31 +123,20 @@ sbi_capstone_init_cap:
     SCC(a4, a4, s0)
     STC(a4, a5, 16)
 
-    lla s0, domains
-    lla s1, domains_end
-    GENCAP(a4, s0, s1)
-    SCC(a4, a4, s0)
-    STC(a4, a5, 32)
+#define SETUP_CAPTAB_ENTRY(name, idx) \
+    lla s0, name; \
+    lla s1, name ## _end; \
+    GENCAP(a4, s0, s1); \
+    SCC(a4, a4, s0); \
+    STC(a4, a5, 16 * idx)
 
-    lla s0, regions
-    lla s1, regions_end
-    GENCAP(a4, s0, s1)
-    SCC(a4, a4, s0)
-    STC(a4, a5, 48)
+    SETUP_CAPTAB_ENTRY(domains, 2)
+    SETUP_CAPTAB_ENTRY(regions, 3)
+    SETUP_CAPTAB_ENTRY(dom_n, 4)
+    SETUP_CAPTAB_ENTRY(region_n, 5)
+    SETUP_CAPTAB_ENTRY(caller_dom, 6)
 
-    lla s0, dom_n
-    lla s1, dom_n_end
-    GENCAP(a4, s0, s1)
-    SCC(a4, a4, s0)
-    sd x0, 0(a4)
-    STC(a4, a5, 64)
-
-    lla s0, region_n
-    lla s1, region_n_end
-    GENCAP(a4, s0, s1)
-    SCC(a4, a4, s0)
-    sd x0, 0(a4)
-    STC(a4, a5, 80)
+#undef SETUP_CAPTAB_ENTRY
 
     lla s0, dom_stack
     lla s1, dom_stack_end
@@ -210,29 +199,20 @@ dom_stack:
 dom_stack_end:
 
 
-.align 4
-domains:
-.zero 16 * CAPSTONE_MAX_DOM_N
-domains_end:
+#define DEF_REGION(name, size) \
+.align 4; \
+name:; \
+.zero size; \
+name ## _end:
 
-.align 4
-regions:
-.zero 16 * CAPSTONE_MAX_REGION_N
-regions_end:
+DEF_REGION(domains, 16 * CAPSTONE_MAX_DOM_N)
+DEF_REGION(regions, 16 * CAPSTONE_MAX_REGION_N)
+DEF_REGION(dom_n, 8)
+DEF_REGION(region_n, 8)
+DEF_REGION(caller_dom, 16)
+DEF_REGION(caller_buf, 16)
+DEF_REGION(global_cap_table, 16 * 7)
 
-.align 4
-dom_n:
-.zero 8
-dom_n_end:
-
-.align 4
-region_n:
-.zero 8
-region_n_end:
-
-.align 4
-global_cap_table:
-.zero 16 * 6
-global_cap_table_end:
+#undef DEF_REGION
 
 #include "capstone-sbi/sbi_capstone.c.S"
