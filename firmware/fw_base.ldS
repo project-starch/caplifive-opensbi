@@ -25,6 +25,11 @@
 		*(.cap_text)
 		. = ALIGN(8);
 		PROVIDE(_cap_text_end = .);
+		. = ALIGN(4);
+		PROVIDE(_cap_int_handler_text_start = .);
+		*(.cap_int_handler_text)
+		. = ALIGN(8);
+		PROVIDE(_cap_int_handler_text_end = .);
 		PROVIDE(_text_end = .);
 	}
 

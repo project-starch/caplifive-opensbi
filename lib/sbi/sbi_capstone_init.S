@@ -32,8 +32,8 @@ sbi_capstone_init_cap:
     # TODO: this should in the end come from the genesis capability
 #ifdef CAPSTONE_ENTER_C
     # a3 = trap vector PC cap
-    lla s0, _cap_text_start
-    lla s1, _cap_text_end
+    lla s0, _cap_int_handler_text_start
+    lla s1, _cap_int_handler_text_end
     GENCAP(a3, s0, s1)
     lla s0, _handle_hw_int_entry
     SCC(a3, a3, s0)
@@ -47,12 +47,20 @@ sbi_capstone_init_cap:
     STC(a3, a4, 0)
     CINCOFFSETIMM(a4, a4, 16)
 
-#define SAVE_REG_16(x) sd x, 0(a4); sd x, 8(a4); CINCOFFSETIMM(a4, a4, 16)
+#define SAVE_REG_16(x) STC(x, a4, 0); CINCOFFSETIMM(a4, a4, 16)
 #define SAVE_REG_8(x) sd x, 0(a4); CINCOFFSETIMM(a4, a4, 8)
 #define SAVE_CSR(x) csrr t0, x; sd t0, 0(a4); CINCOFFSETIMM(a4, a4, 8)
 
-    # GPRs x 31 + CCSRs x 4
-    li t1, 31 + 4
+    SAVE_REG_16(x0) // ra
+    lla s0, int_handler_stack
+    lla s1, int_handler_stack_end
+    GENCAP(t0, s0, s1)
+    SCC(t0, t0, s1)
+    DELIN(t0)
+    SAVE_REG_16(t0) // sp
+
+    # GPRs x (31 - 2) + CCSRs x 4
+    li t1, (31 - 2) + 4
 1:
     addi t1, t1, -1
     SAVE_REG_16(x0)
@@ -164,28 +172,29 @@ sbi_capstone_init_cap:
 
 # hardware interrupt
 
+.section .cap_int_handler_text
+
 _handle_hw_int_entry:
+    # save ra
+    CINCOFFSETIMM(sp, sp, -16)
+    STC(ra, sp, 0)
+
     # check CIC
-    csrr t0, CSR_CIC
-    slli t0, t0, 1
-    srli t0, t0, 1
+    csrr a0, CSR_CIC
+    slli a0, a0, 1
+    srli a0, a0, 1
+    call handle_hw_int
 
+    # cause
     # ignore the external interrupts for now
-
-    # clear cis
-    li t1, 1
-    sll t1, t1, t0
-    not t1, t1
-    csrr t2, CSR_CIS
-    and t2, t2, t1
-    csrw CSR_CIS, t2
 
 # handle_int_ret:
     # inject V-interrupt
-    li t1, 1
-    sll t1, t1, t0
     lla t0, _handle_hw_int_entry
-    RETURN(ra, t0, t1)
+
+    LDC(ra, sp, 0)
+    CINCOFFSETIMM(sp, sp, 16)
+    RETURN(ra, t0, a0)
 
 .section .data
 .align 4
@@ -217,4 +226,15 @@ DEF_REGION(global_cap_table, 16 * 8)
 
 #undef DEF_REGION
 
+.section .cap_text
 #include "capstone-sbi/sbi_capstone.c.S"
+
+.section .cap_int_handler_text
+#include "capstone_int_handler.c.S"
+
+.section .data
+.align 4
+int_handler_stack:
+.zero 4096 * 4
+.align 4
+int_handler_stack_end:
