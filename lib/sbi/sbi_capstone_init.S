@@ -144,6 +144,8 @@ sbi_capstone_init_cap:
     SETUP_CAPTAB_ENTRY(region_n, 5)
     SETUP_CAPTAB_ENTRY(caller_dom, 6)
     SETUP_CAPTAB_ENTRY(caller_buf, 7)
+    SETUP_CAPTAB_ENTRY(smode_initialised, 8)
+    SETUP_CAPTAB_ENTRY(smode_saved_context, 9)
 
 #undef SETUP_CAPTAB_ENTRY
 
@@ -152,7 +154,7 @@ sbi_capstone_init_cap:
     GENCAP(a3, s0, s1)
     SCC(a3, a3, s1)
     DELIN(a3) # conforming to the ABI
-    STC(a5, a3, -16) # store the cap to the global cap table at the bottom of the stack
+    STC(a5, a3, -32 * 8 -16) # store the cap to the global cap table at the bottom of the stack
     
     CCSRRW(x0, CCSR_CSCRATCH, a3)
     li a3, 0
@@ -222,7 +224,9 @@ DEF_REGION(dom_n, 8)
 DEF_REGION(region_n, 8)
 DEF_REGION(caller_dom, 16)
 DEF_REGION(caller_buf, 16)
-DEF_REGION(global_cap_table, 16 * 8)
+DEF_REGION(smode_initialised, 8)
+DEF_REGION(smode_saved_context, 16)
+DEF_REGION(global_cap_table, 16 * 10)
 
 #undef DEF_REGION
 
