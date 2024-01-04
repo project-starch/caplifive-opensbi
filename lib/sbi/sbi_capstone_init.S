@@ -138,15 +138,26 @@ sbi_capstone_init_cap:
     SCC(a4, a4, s0); \
     STC(a4, a5, 16 * idx)
 
+#define SETUP_CAPTAB_ENTRY_INITVAL(name, idx, val) \
+    lla s0, name; \
+    lla s1, name ## _end; \
+    GENCAP(a4, s0, s1); \
+    SCC(a4, a4, s0); \
+    li s0, val; \
+    sd s0, 0(a4); \
+    STC(a4, a5, 16 * idx)
+
     SETUP_CAPTAB_ENTRY(domains, 2)
     SETUP_CAPTAB_ENTRY(regions, 3)
     SETUP_CAPTAB_ENTRY(dom_n, 4)
-    SETUP_CAPTAB_ENTRY(region_n, 5)
-    SETUP_CAPTAB_ENTRY(caller_dom, 6)
-    SETUP_CAPTAB_ENTRY(caller_buf, 7)
-    SETUP_CAPTAB_ENTRY(smode_initialised, 8)
-    SETUP_CAPTAB_ENTRY(smode_saved_context, 9)
+    SETUP_CAPTAB_ENTRY_INITVAL(region_n, 5, 1) # cmmu contains one region already
+    SETUP_CAPTAB_ENTRY(cmmu_region_id, 6)
+    SETUP_CAPTAB_ENTRY(caller_dom, 7)
+    SETUP_CAPTAB_ENTRY(caller_buf, 8)
+    SETUP_CAPTAB_ENTRY(smode_initialised, 9)
+    SETUP_CAPTAB_ENTRY(smode_saved_context, 10)
 
+#undef SETUP_CAPTAB_ENTRY_INITVAL
 #undef SETUP_CAPTAB_ENTRY
 
     lla s0, dom_stack
@@ -222,11 +233,12 @@ DEF_REGION(domains, 16 * CAPSTONE_MAX_DOM_N)
 DEF_REGION(regions, 16 * CAPSTONE_MAX_REGION_N)
 DEF_REGION(dom_n, 8)
 DEF_REGION(region_n, 8)
+DEF_REGION(cmmu_region_id, 8)
 DEF_REGION(caller_dom, 16)
 DEF_REGION(caller_buf, 16)
 DEF_REGION(smode_initialised, 8)
 DEF_REGION(smode_saved_context, 16)
-DEF_REGION(global_cap_table, 16 * 10)
+DEF_REGION(global_cap_table, 16 * 11)
 
 #undef DEF_REGION
 
