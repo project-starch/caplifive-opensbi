@@ -51,20 +51,8 @@ sbi_capstone_init_cap:
 #define SAVE_REG_8(x) sd x, 0(a4); CINCOFFSETIMM(a4, a4, 8)
 #define SAVE_CSR(x) csrr t0, x; sd t0, 0(a4); CINCOFFSETIMM(a4, a4, 8)
 
-    SAVE_REG_16(x0) // ra
-    lla s0, int_handler_stack
-    lla s1, int_handler_stack_end
-    GENCAP(t0, s0, s1)
-    SCC(t0, t0, s1)
-    DELIN(t0)
-    SAVE_REG_16(t0) // sp
-
-    # GPRs x (31 - 2) + CCSRs x 4
-    li t1, (31 - 2) + 4
-1:
-    addi t1, t1, -1
-    SAVE_REG_16(x0)
-    bne t1, x0, 1b
+    SAVE_REG_16(x0) # ctvec
+    SAVE_REG_16(x0) # cscratch
 
     # CSRs
     csrr t0, mstatus
@@ -77,6 +65,28 @@ sbi_capstone_init_cap:
     SAVE_CSR(medeleg)
     SAVE_CSR(mip)
     SAVE_CSR(mie)
+
+    SAVE_REG_8(x0) # offsetmmu
+    SAVE_REG_16(x0) # cmmu
+    SAVE_REG_16(x0) # cepc
+
+    # GPRs
+
+    SAVE_REG_16(x0) // ra
+    lla s0, int_handler_stack
+    lla s1, int_handler_stack_end
+    GENCAP(t0, s0, s1)
+    SCC(t0, t0, s1)
+    DELIN(t0)
+    SAVE_REG_16(t0) // sp
+
+    # GPRs x (31 - 2)
+    li t1, 31 - 2
+1:
+    addi t1, t1, -1
+    SAVE_REG_16(x0)
+    bne t1, x0, 1b
+
     SAVE_CSR(mcause)
     SAVE_CSR(mtval)
     SAVE_REG_8(x0) # mtval2 is not available?
@@ -87,8 +97,6 @@ sbi_capstone_init_cap:
     SAVE_CSR(sepc)
     SAVE_CSR(sscratch)
     SAVE_CSR(satp)
-
-    SAVE_CSR(CSR_OFFSETMMU)
 
 #undef SAVE_CSR
 #undef SAVE_REG_8
