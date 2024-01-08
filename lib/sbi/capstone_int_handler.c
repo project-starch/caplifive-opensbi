@@ -22,6 +22,7 @@ static unsigned nonmain_running;
 
 
 static void handle_hw_int(__domasync void *ra) {
+    __domasync void *main_thread_ca;
     unsigned cause;
     __asm__ volatile ("csrr %0, cic" : "=r"(cause));
     cause = (cause << 1) >> 1;
@@ -31,8 +32,8 @@ static void handle_hw_int(__domasync void *ra) {
     if(nonmain_running) {
         // return to main thread
         nonmain_running = 0;
-        // TODo: need to pass ra back
-        __domreturn(main_thread, __int_handler_entry_reentry, 1 << cause);
+        main_thread_ca = main_thread; /* to trick the compiler */
+        __domreturn(main_thread_ca, __int_handler_entry_reentry, 1 << cause, ra);
     } else {
         __domreturn(ra, __int_handler_entry_reentry, 1 << cause);
     }
@@ -47,13 +48,12 @@ static void handle_ih_call(__domret void *ra, unsigned request_no, __dom void *a
     }
     switch(request_no) {
         case CAPSTONE_IHI_THREAD_SPAWN:
+        case CAPSTONE_IHI_THREAD_YIELD:
             // save ra somewhere
             main_thread = ra;
             nonmain_running = 1;
             __domreturn(arg, __int_handler_entry_reentry, 0);
             while(1); /* should not reach here */
-        case CAPSTONE_IHI_THREAD_YIELD:
-            while(1);
         default:
             while(1);
     }
