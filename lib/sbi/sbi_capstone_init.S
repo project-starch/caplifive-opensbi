@@ -35,7 +35,7 @@ sbi_capstone_init_cap:
     lla s0, _cap_int_handler_text_start
     lla s1, _cap_int_handler_text_end
     GENCAP(a3, s0, s1)
-    lla s0, _handle_hw_int_entry
+    lla s0, __int_handler_entry_entry
     SCC(a3, a3, s0)
 
     # a4 = seal region
@@ -52,7 +52,12 @@ sbi_capstone_init_cap:
 #define SAVE_CSR(x) csrr t0, x; sd t0, 0(a4); CINCOFFSETIMM(a4, a4, 8)
 
     SAVE_REG_16(x0) # ctvec
-    SAVE_REG_16(x0) # cscratch
+
+    lla s0, int_handler_stack
+    lla s1, int_handler_stack_end
+    GENCAP(t0, s0, s1)
+    SCC(t0, t0, s1)
+    SAVE_REG_16(t0) # cscratch (stack pointer)
 
     # CSRs
     csrr t0, mstatus
@@ -65,38 +70,6 @@ sbi_capstone_init_cap:
     SAVE_CSR(medeleg)
     SAVE_CSR(mip)
     SAVE_CSR(mie)
-
-    SAVE_REG_8(x0) # offsetmmu
-    SAVE_REG_16(x0) # cmmu
-    SAVE_REG_16(x0) # cepc
-
-    # GPRs
-
-    SAVE_REG_16(x0) // ra
-    lla s0, int_handler_stack
-    lla s1, int_handler_stack_end
-    GENCAP(t0, s0, s1)
-    SCC(t0, t0, s1)
-    DELIN(t0)
-    SAVE_REG_16(t0) // sp
-
-    # GPRs x (31 - 2)
-    li t1, 31 - 2
-1:
-    addi t1, t1, -1
-    SAVE_REG_16(x0)
-    bne t1, x0, 1b
-
-    SAVE_CSR(mcause)
-    SAVE_CSR(mtval)
-    SAVE_REG_8(x0) # mtval2 is not available?
-    SAVE_REG_8(x0) # mtinst is not available?
-    SAVE_CSR(stvec)
-    SAVE_CSR(scause)
-    SAVE_CSR(stval)
-    SAVE_CSR(sepc)
-    SAVE_CSR(sscratch)
-    SAVE_CSR(satp)
 
 #undef SAVE_CSR
 #undef SAVE_REG_8
@@ -193,30 +166,6 @@ sbi_capstone_init_cap:
 
 # hardware interrupt
 
-.section .cap_int_handler_text
-
-_handle_hw_int_entry:
-    # save ra
-    CINCOFFSETIMM(sp, sp, -16)
-    STC(ra, sp, 0)
-
-    # check CIC
-    csrr a0, CSR_CIC
-    slli a0, a0, 1
-    srli a0, a0, 1
-    call handle_hw_int
-
-    # cause
-    # ignore the external interrupts for now
-
-# handle_int_ret:
-    # inject V-interrupt
-    lla t0, _handle_hw_int_entry
-
-    LDC(ra, sp, 0)
-    CINCOFFSETIMM(sp, sp, 16)
-    RETURN(ra, t0, a0)
-
 .section .data
 .align 4
 int_handler_seal_region:
@@ -254,11 +203,12 @@ DEF_REGION(global_cap_table, 16 * 11)
 #include "capstone-sbi/sbi_capstone.c.S"
 
 .section .cap_int_handler_text
+.weak _start
 #include "capstone_int_handler.c.S"
 
 .section .data
 .align 4
 int_handler_stack:
-.zero 4096 * 4
+.zero 4096 * 8
 .align 4
 int_handler_stack_end:
