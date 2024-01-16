@@ -79,8 +79,8 @@ sbi_capstone_init_cap:
     CCSRRW(x0, CCSR_CIH, a4)
 
     # delegate most of S- and U- mode H-interrupts
-    li t0, MIP_SSIP | MIP_STIP | MIP_SEIP # | MIP_MTIP
-    csrw CSR_CID, t0
+    # li t0, MIP_SSIP | MIP_STIP # | MIP_SEIP # | MIP_MTIP
+    csrw CSR_CID, x0
 
     # re-enable status; TODO: we should use a different interface for this?
     csrr s0, mstatus
