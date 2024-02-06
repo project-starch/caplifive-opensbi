@@ -6,15 +6,28 @@
 __dominit void dom_init() { }
 
 void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2) {
+    int i;
+
     // regions
     region_n = 3;
-    regions[1] = cap1;
-    regions[2] = cap2;
-    C_WRITE_CCSR(CCSR_CMMU, cap0);
-    cmmu_region_id = 0; 
+    C_WRITE_CCSR(cpmp(0), cap0);
+    C_WRITE_CCSR(cpmp(1), cap1);
+    C_WRITE_CCSR(cpmp(2), cap2);
+    cpmp_region[0] = 0;
+    cpmp_region[1] = 1;
+    cpmp_region[2] = 2;
+    region_cpmp[0] = 0;
+    region_cpmp[1] = 1;
+    region_cpmp[2] = 2;
+    for(i = 3; i < CPMP_COUNT; i += 1) {
+        cpmp_region[i] = -1;
+    }
+    for(i = 3; i < CAPSTONE_MAX_REGION_N; i += 1) {
+        region_cpmp[i] = -1;
+    }
 
     // trap vector
-    C_WRITE_CCSR(CCSR_CTVEC, _cap_trap_entry);
+    C_WRITE_CCSR(ctvec, _cap_trap_entry);
 
     // timer capabilities
     unsigned *cap = split_out_cap(SBI_MTIME_ADDR, 8, 0);
@@ -49,15 +62,15 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
 #undef SAVE_CSR
 
     __dom void *dom_ih = __seal(cap_int_seal);
-    C_WRITE_CCSR(CCSR_CIH, dom_ih);
+    C_WRITE_CCSR(cih, dom_ih);
 
     // interrupt delegation
-    C_WRITE_CSR(CSR_CID, 0);
+    C_WRITE_CSR(cid, 0);
 
     // S-mode entry point
     unsigned mepc_val;
     C_READ_CSR(mepc, mepc_val);
-    C_WRITE_CCSR(CCSR_CEPC, mepc_val);
+    C_WRITE_CCSR(cepc, mepc_val);
 
     // re-enable interrupts
     __asm__("csrs mstatus, %0" :: "r"(MSTATUS_MIE));
