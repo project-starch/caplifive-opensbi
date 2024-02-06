@@ -60,7 +60,7 @@ sbi_capstone_init_cap:
     # li a1, 1
     # slli a1, a1, 63
     # GENCAP(a3, a0, a1)
-    # CCSRRW(x0, CCSR_CMMU, a3)
+    # CCSRRW(x0, CCSR_CPMP(0), a3)
 
     mv a0, s0
     mv a1, s1
