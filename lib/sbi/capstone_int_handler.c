@@ -15,6 +15,8 @@
 #define capstone_error(err_code) do { C_PRINT(CAPSTONE_ERR_STARTER); C_PRINT(err_code); while(1); } while(0)
 #define cap_base(cap) __capfield((cap), 3)
 #define cap_end(cap) __capfield((cap), 4)
+#define debug_counter_inc(counter_no, delta) __asm__ volatile(".insn r 0x5b, 0x1, 0x45, x0, %0, %1" :: "r"(counter_no), "r"(delta))
+#define debug_counter_tick(counter_no) debug_counter_inc((counter_no), 1)
 
 static __domret void *main_thread;
 /* is the currently running thread a non-main thread? */
@@ -24,6 +26,9 @@ static unsigned nonmain_running;
 static void handle_hw_int(__domasync void *ra) {
     __domasync void *main_thread_ca;
     unsigned cause;
+
+    debug_counter_tick(DEBUG_COUNTER_H_INT);
+
     __asm__ volatile ("csrr %0, cic" : "=r"(cause));
     cause = (cause << 1) >> 1;
     // clear pending bit
