@@ -130,13 +130,15 @@ sbi_capstone_init_cap:
 
     SETUP_CAPTAB_ENTRY(domains, 2)
     SETUP_CAPTAB_ENTRY(regions, 3)
-    SETUP_CAPTAB_ENTRY(dom_n, 4)
-    SETUP_CAPTAB_ENTRY_INITVAL(region_n, 5, 1) # cmmu contains one region already
-    SETUP_CAPTAB_ENTRY(cmmu_region_id, 6)
-    SETUP_CAPTAB_ENTRY(caller_dom, 7)
-    SETUP_CAPTAB_ENTRY(caller_buf, 8)
-    SETUP_CAPTAB_ENTRY(smode_initialised, 9)
-    SETUP_CAPTAB_ENTRY(smode_saved_context, 10)
+    SETUP_CAPTAB_ENTRY(region_cpmp, 4)
+    SETUP_CAPTAB_ENTRY(cpmp_region, 5)
+    SETUP_CAPTAB_ENTRY(dom_n, 6)
+    SETUP_CAPTAB_ENTRY_INITVAL(region_n, 7, 1) # cmmu contains one region already
+    SETUP_CAPTAB_ENTRY(next_eject_cpmp, 8)
+    SETUP_CAPTAB_ENTRY(caller_dom, 9)
+    SETUP_CAPTAB_ENTRY(caller_buf, 10)
+    SETUP_CAPTAB_ENTRY(smode_initialised, 10)
+    SETUP_CAPTAB_ENTRY(smode_saved_context, 11)
 
 #undef SETUP_CAPTAB_ENTRY_INITVAL
 #undef SETUP_CAPTAB_ENTRY
@@ -188,9 +190,11 @@ name ## _end:
 
 DEF_REGION(domains, 16 * CAPSTONE_MAX_DOM_N)
 DEF_REGION(regions, 16 * CAPSTONE_MAX_REGION_N)
+DEF_REGION(region_cpmp, 8 * CAPSTONE_MAX_REGION_N)
+DEF_REGION(cpmp_region, 8 * CPMP_COUNT)
 DEF_REGION(dom_n, 8)
 DEF_REGION(region_n, 8)
-DEF_REGION(cmmu_region_id, 8)
+DEF_REGION(next_eject_cpmp, 8)
 DEF_REGION(caller_dom, 16)
 DEF_REGION(caller_buf, 16)
 DEF_REGION(smode_initialised, 8)
