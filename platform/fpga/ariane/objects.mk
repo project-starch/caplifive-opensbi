@@ -18,7 +18,8 @@ PLATFORM_RISCV_XLEN = 64
 
 # Blobs to build
 FW_TEXT_START=0x80000000
-FW_JUMP=n
+FW_DYNAMIC=y
+FW_JUMP=y
 
 ifeq ($(PLATFORM_RISCV_XLEN), 32)
  # This needs to be 4MB aligned for 32-bit support
@@ -31,7 +32,8 @@ FW_JUMP_FDT_ADDR=0x82200000
 
 # Firmware with payload configuration.
 FW_PAYLOAD=y
-
+FW_PAYLOAD_PATH=/home/adi4kisp/Desktop/Workspace/caplifive-buildroot/build/build/linux-custom/arch/riscv/boot/Image
+FW_FDT_PATH=/home/adi4kisp/Desktop/Workspace/caplifive-buildroot/build/build/linux-custom/arch/riscv/boot/dts/caplifive.dtb
 ifeq ($(PLATFORM_RISCV_XLEN), 32)
 # This needs to be 4MB aligned for 32-bit support
   FW_PAYLOAD_OFFSET=0x400000

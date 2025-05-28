@@ -36,6 +36,7 @@ sbi_capstone_init_cap:
     # initialise the stack region
     lla s0, dom_stack
     lla s1, dom_stack_end
+    li a1, 0
     SPLIT(a2, a1, s0)
     SPLIT(a3, a2, s1)
 
@@ -44,7 +45,7 @@ sbi_capstone_init_cap:
     mv s1, a5
 
     # capabilities: a0, pc, a1, a2 (stack), a3
-    CCSRRW(x0, CCSR_CSCRATCH, a2)
+    CCSRRW(x0, 6, a2)
     call dom_init
 
     MOVC(a2, a3)

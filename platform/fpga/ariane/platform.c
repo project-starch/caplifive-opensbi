@@ -19,7 +19,7 @@
 #include <sbi_utils/timer/aclint_mtimer.h>
 
 #define ARIANE_UART_ADDR			0x10000000
-#define ARIANE_UART_FREQ			50000000
+#define ARIANE_UART_FREQ			32000000
 #define ARIANE_UART_BAUDRATE			115200
 #define ARIANE_UART_REG_SHIFT			2
 #define ARIANE_UART_REG_WIDTH			4
@@ -181,7 +181,7 @@ const struct sbi_platform_operations platform_ops = {
 const struct sbi_platform platform = {
 	.opensbi_version = OPENSBI_VERSION,
 	.platform_version = SBI_PLATFORM_VERSION(0x0, 0x01),
-	.name = "ARIANE RISC-V",
+	.name = "CAPLIFIVE-ARIANE RISC-V",
 	.features = SBI_PLATFORM_DEFAULT_FEATURES,
 	.hart_count = ARIANE_HART_COUNT,
 	.hart_stack_size = SBI_PLATFORM_DEFAULT_HART_STACK_SIZE,
