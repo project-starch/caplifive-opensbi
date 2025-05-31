@@ -1,5 +1,40 @@
 #include "capstone-sbi/sbi_capstone.h"
-
+#ifndef __CAPSTONE_C_BUILTIN__
+#define __CAPSTONE_C_BUILTIN__
+#define cincoffset(rd, rs1, rs2) .insn r 0x5b, 0x1, 0xc, rd, rs1, rs2
+#define cincoffsetimm(rd, rs, offset) .insn i 0x5b, 0x2, rd, offset(rs)
+#define movc(rd, rs) .insn r 0x5b, 0x1, 0xa, rd, rs, x0
+#define ldc(rd, rs, offset) .insn i 0x5b, 0x3, rd, offset(rs)
+#define stc(rs1, rs2, offset) .insn s 0x5b, 0x4, rs1, offset(rs2)
+#define shrinkto(rd, rs, size) .insn i 0x5b, 0x0, rd, size(rs)
+#define mrev(rd, rs) .insn r 0x5b, 0x1, 0x8, rd, rs, x0
+#define revoke(rs) .insn r 0x5b, 0x1, 0x0, x0, rs, x0
+#define seal(rd, rs) .insn r 0x5b, 0x1, 0x7, rd, rs, x0
+#define delin(rd) .insn r 0x5b, 0x1, 0x3, rd, x0, x0
+#define tighten(rd, rs, imm) .insn r 0x5b, 0x1, 0x2, rd, rs, x##imm
+#define domcall(rd, rs) .insn r 0x5b, 0x1, 0x20, rd, rs, x0
+#define domreturn(rd, rs1, rs2) .insn r 0x5b, 0x1, 0x21, rd, rs1, rs2
+#define ccsrrw(rd, ccsr, rs) .insn i 0x5b, 0x7, rd, ccsr(rs)
+#define lcc(rd, rs, imm) .insn r 0x5b, 0x1, 0x4, rd, rs, x##imm
+#define scc(rd, rs1, rs2) .insn r 0x5b, 0x1, 0x5, rd, rs1, rs2
+#define split(rd, rs1, rs2) .insn r 0x5b, 0x1, 0x6, rd, rs1, rs2
+#define ctvec 0x000
+#define cih 0x001
+#define cepc 0x002
+#define cpmp(ind) 0x010 + ind
+#define cscratch 0x004
+#define cis 0x804
+#define cid 0x801
+#define cic 0x802
+#define offsetmmu 0x803
+#define DROP(rs1)                       .insn r 0x5B, 0x1, 0xb, x0, rs1, x0
+#define CAPCREATE(reg)          .insn r 0x7B, 0x0, 0x4, reg, x0, x0
+#define CAPTYPE(rd,rs1)         .insn r 0x7B, 0x0, 0x5, rd, rs1, x0
+#define CAPNODE(rd,rs1)         .insn r 0x7B, 0x0, 0x6, rd, rs1, x0
+#define CAPPERM(rd,rs1)         .insn r 0x7B, 0x0, 0x7, rd, rs1, x0
+#define CAPBOUND(rd,rs1,rs2)    .insn r 0x7B, 0x0, 0x8, rd, rs1, rs2
+#define CAPPRINT(rs1)           .insn r 0x7B, 0x0, 0x9, x0, rs1, x0
+#endif
 #define CAPSTONE_ENTER_C
 
 .section .cap_text
@@ -44,9 +79,66 @@ sbi_capstone_init_cap:
     mv s1, a5
 
     # capabilities: a0, pc, a1, a2 (stack), a3
-    CCSRRW(x0, CCSR_CSCRATCH, a2)
-    call dom_init
-
+    #---------------------------dom init start (modified)
+    MOVC(sp, a2)
+    lcc(t1, sp, 4)
+    addi t1, t1, -208
+    split(gp, sp, t1)
+    addi t1, t1, -16
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 0)
+    addi t1, t1, -16
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 16)
+    addi t1, t1, -1024
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 32)
+    addi t1, t1, -1024
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 48)
+    addi t1, t1, -512
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 64)
+    addi t1, t1, -128
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 80)
+    addi t1, t1, -16
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 96)
+    addi t1, t1, -16
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 112)
+    addi t1, t1, -16
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 128)
+    addi t1, t1, -16
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 144)
+    addi t1, t1, -16
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 160)
+    addi t1, t1, -16
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 176)
+    addi t1, t1, -16
+    split(t2, sp, t1)
+    delin(t2)
+    stc(t2, gp, 192)
+    scc(sp, sp, t1)
+    delin(sp)
+    #---------------------------dom init end
     MOVC(a2, a3)
     call cap_env_init
 
