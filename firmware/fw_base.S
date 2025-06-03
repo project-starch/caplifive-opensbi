@@ -47,6 +47,8 @@
 	.globl _start
 	.globl _start_warm
 _start:
+	call sbi_capstone_init // FIXME: hack for quick testing
+
 	/* Find preferred boot HART id */
 	MOV_3R	s0, a0, s1, a1, s2, a2
 	call	fw_boot_hart
