@@ -20,14 +20,15 @@
 		PROVIDE(_text_start = .);
 		*(.entry)
 		*(.text)
-		. = ALIGN(0x1000);
+		. = ALIGN(4);
 		PROVIDE(_cap_text_start = .);
 		*(.cap_text)
-		. = ALIGN(0x1000);
+		. = ALIGN(8);
 		PROVIDE(_cap_text_end = .);
+		. = ALIGN(4);
 		PROVIDE(_cap_int_handler_text_start = .);
 		*(.cap_int_handler_text)
-		. = ALIGN(0x1000);
+		. = ALIGN(8);
 		PROVIDE(_cap_int_handler_text_end = .);
 		PROVIDE(_text_end = .);
 	}
