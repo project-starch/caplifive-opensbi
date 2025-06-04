@@ -82,7 +82,7 @@ sbi_capstone_init_cap:
 .section .data
 .align 4
 dom_stack:
-.zero 4096 * 16
+.zero 4096
 .align 4
 dom_stack_end:
 
