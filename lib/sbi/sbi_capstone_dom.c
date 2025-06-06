@@ -75,6 +75,7 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     // re-enable interrupts
     __asm__("csrs mstatus, %0" :: "r"(MSTATUS_MIE));
 
-    __asm__("nop"); // FIXME: this works around the problem with flushing in current RTL
-    __asm__("nop");
+    // __asm__("nop"); // this was to work around the problem with flushing in current RTL,
+                       // not needed anymore
+    // __asm__("nop");
 }
