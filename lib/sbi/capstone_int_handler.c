@@ -12,7 +12,7 @@
 #define C_SET_CURSOR(dest, cap, cursor) __asm__("scc(%0, %1, %2)" : "=r"(dest) : "r"(cap), "r"(cursor))
 #define C_PRINT(v) __asm__ volatile(".insn r 0x5b, 0x1, 0x43, x0, %0, x0" :: "r"(v))
 #define C_GEN_CAP(dest, base, end) __asm__(".insn r 0x5b, 0x1, 0x40, %0, %1, %2" : "=r"(dest) : "r"(base), "r"(end));
-#define capstone_error(err_code) do { C_PRINT(CAPSTONE_ERR_STARTER); C_PRINT(err_code); while(1); } while(0)
+#define capstone_error(err_code) __asm__ ("ebreak")
 #define cap_base(cap) __capfield((cap), 3)
 #define cap_end(cap) __capfield((cap), 4)
 #define debug_counter_inc(counter_no, delta) __asm__ volatile(".insn r 0x5b, 0x1, 0x45, x0, %0, %1" :: "r"(counter_no), "r"(delta))
@@ -58,9 +58,9 @@ static void handle_ih_call(__domret void *ra, unsigned request_no, __dom void *a
             main_thread = ra;
             nonmain_running = 1;
             __domreturn(arg, __int_handler_entry_reentry, 0);
-            while(1); /* should not reach here */
+            __asm__ ("ebreak"); /* should not reach here */
         default:
-            while(1);
+            __asm__ ("ebreak");
     }
 }
 
