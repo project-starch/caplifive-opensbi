@@ -7,12 +7,12 @@
 .global sbi_capstone_init
 sbi_capstone_init:
     # disable interrupts
-    csrr s0, mstatus
-    li s1, -1
-    xori s1, s1, MSTATUS_MIE
-    and s0, s0, s1
-    csrr s2, mepc
-    csrw mstatus, s0
+    # li s1, -1
+    # xori s1, s1, MSTATUS_MIE
+    # and s0, s0, s1
+    # csrr s2, mepc
+    # csrw mstatus, s0
+    # csrr s2, mscratch
 
     # to avoid clobbering during capenter
     mv a4, a0
@@ -64,6 +64,7 @@ sbi_capstone_init_cap:
 
     mv a0, s0
     mv a1, s1
+    # csrw mscratch, s2
 
     mret
 
@@ -82,7 +83,7 @@ sbi_capstone_init_cap:
 .section .data
 .align 4
 dom_stack:
-.zero 4096
+.zero 4096*2
 .align 4
 dom_stack_end:
 

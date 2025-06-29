@@ -27,7 +27,7 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     }
 
     // // trap vector
-    // C_WRITE_CCSR(ctvec, _cap_trap_entry);
+    C_WRITE_CCSR(ctvec, _cap_trap_entry);
 
     // timer capabilities
     unsigned *cap = split_out_cap(SBI_MTIME_ADDR, 8, 0);
@@ -73,5 +73,5 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     C_WRITE_CCSR(cepc, mepc_val);
 
     // re-enable interrupts
-    __asm__("csrs mstatus, %0" :: "r"(MSTATUS_MIE));
+    // __asm__("csrs mstatus, %0" :: "r"(MSTATUS_MIE));
 }
