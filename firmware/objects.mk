@@ -63,6 +63,11 @@ ifdef FW_PAYLOAD_FDT_ADDR
 firmware-genflags-$(FW_PAYLOAD) += -DFW_PAYLOAD_FDT_ADDR=$(FW_PAYLOAD_FDT_ADDR)
 endif
 
+ifdef FW_PAYLOAD_FDT_PATH
+firmware-genflags-$(FW_PAYLOAD) += -DFW_PAYLOAD_FDT_PATH=$(FW_PAYLOAD_FDT_PATH)
+endif
+
+
 ifdef FW_OPTIONS
 firmware-genflags-y += -DFW_OPTIONS=$(FW_OPTIONS)
 endif

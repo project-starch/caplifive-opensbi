@@ -27,7 +27,7 @@ SECTIONS
 		. = ALIGN(8);
 		PROVIDE(_payload_end = .);
 	}
-	#ifdef FW_PAYLOAD_FDT_PATH
+#ifdef FW_PAYLOAD_FDT_PATH
 	. = FW_PAYLOAD_FDT_ADDR;
 
 	.fdt :
@@ -37,7 +37,7 @@ SECTIONS
 		. = ALIGN(8);
 		PROVIDE(_fdt_end = .);
 	}
-	#endif
+#endif
 
 	PROVIDE(_fw_reloc_end = .);
 }
