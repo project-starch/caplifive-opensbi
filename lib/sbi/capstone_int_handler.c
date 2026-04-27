@@ -15,8 +15,13 @@
 #define capstone_error(err_code) while(1);
 #define cap_base(cap) __capfield((cap), 3)
 #define cap_end(cap) __capfield((cap), 4)
+#ifdef CAPSTONE_DEBUG_ENABLE
 #define debug_counter_inc(counter_no, delta) __asm__ volatile(".insn r 0x5b, 0x1, 0x45, x0, %0, %1" :: "r"(counter_no), "r"(delta))
 #define debug_counter_tick(counter_no) debug_counter_inc((counter_no), 1)
+#else
+#define debug_counter_inc(counter_no, delta)
+#define debug_counter_tick(counter_no)
+#endif
 
 static __domret void *main_thread;
 /* is the currently running thread a non-main thread? */
