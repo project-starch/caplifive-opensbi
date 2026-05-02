@@ -65,8 +65,8 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     C_WRITE_CCSR(cih, dom_ih);
 
     // interrupt delegation
-    C_WRITE_CSR(cid, 0);
-
+    //C_WRITE_CSR(cid, 0);
+    C_WRITE_CSR(cid, 0xaaa);
     // S-mode entry point
     unsigned mepc_val;
     C_READ_CSR(mepc, mepc_val);
