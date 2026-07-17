@@ -32,15 +32,19 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     // timer capabilities
     unsigned *cap = split_out_cap(SBI_MTIME_ADDR, 8, 0);
     mtime = cap;
+    __asm__ ("fence.i");
     cap = split_out_cap(SBI_MTIMECMP_ADDR, 8, 0);
     mtimecmp = cap;
 
     // int handler domain
+    __asm__ ("fence.i");
     __linear unsigned *cap_int_stack  = split_out_cap(int_handler_stack,
         int_handler_stack_end - int_handler_stack, 1);
+    __asm__ ("fence.i");
     cap_int_stack = __setcursor(cap_int_stack, int_handler_stack_end);
     __linear unsigned *cap_int_seal = split_out_cap(int_handler_seal_region, 
         int_handler_seal_region_end - int_handler_seal_region, 1);
+    __asm__ ("fence.i");
     unsigned *cap_int_code = split_out_cap(_cap_int_handler_text_start,
         _cap_int_handler_text_end - _cap_int_handler_text_start, 0);
     cap_int_code = __setcursor(cap_int_code, __int_handler_entry_entry);
@@ -65,8 +69,8 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     C_WRITE_CCSR(cih, dom_ih);
 
     // interrupt delegation
-    //C_WRITE_CSR(cid, 0);
-    C_WRITE_CSR(cid, 0xaaa);
+    C_WRITE_CSR(cid, 0);
+    //C_WRITE_CSR(cid, 0xaaa);
     // S-mode entry point
     unsigned mepc_val;
     C_READ_CSR(mepc, mepc_val);

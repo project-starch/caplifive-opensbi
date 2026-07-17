@@ -7,12 +7,12 @@
 .global sbi_capstone_init
 sbi_capstone_init:
     # disable interrupts
-    csrr s0, mstatus
-    li s1, -1
-    xori s1, s1, MSTATUS_MIE
-    and s0, s0, s1
-    csrr s2, mepc
-    csrw mstatus, s0
+    //csrr s0, mstatus
+    //li s1, -1
+    //xori s1, s1, MSTATUS_MIE
+    //and s0, s0, s1
+    //csrr s2, mepc
+    //csrw mstatus, s0
 
     # to avoid clobbering during capenter
     mv a4, a0

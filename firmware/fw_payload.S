@@ -95,3 +95,15 @@ payload_bin:
 #else
 	.incbin	FW_PAYLOAD_PATH
 #endif
+
+#ifdef FW_PAYLOAD_FDT_PATH
+.section .fdt, "a", %progbits
+.align 4
+.globl fdt_bin
+fdt_bin:
+#ifdef FW_FDT_PATH
+    .incbin FW_FDT_PATH
+#else
+    .word 0
+#endif
+#endif
