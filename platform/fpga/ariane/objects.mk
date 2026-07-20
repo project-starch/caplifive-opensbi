@@ -22,7 +22,7 @@ FW_DYNAMIC=y
 FW_JUMP=y
 LINUX_PAYLOAD ?=
 ifeq ($(LINUX_PAYLOAD),1)
-  FW_FDT_PATH=../../images/caplifive.dtb
+  #FW_FDT_PATH=../../images/caplifive.dtb
   FW_PAYLOAD_PATH=../../images/Image
   FW_PAYLOAD_FDT_PATH=../../images/caplifive.dtb
 endif
@@ -45,7 +45,13 @@ else
 # This needs to be 2MB aligned for 64-bit support
   FW_PAYLOAD_OFFSET=0x200000
 endif
+# When FW_FDT_PATH is set, fw_base.S embeds the DTB and updates a1 to point
+# at fw_fdt_bin.  Leave FW_PAYLOAD_FDT_ADDR undefined in that case so
+# fw_next_arg1() passes the embedded DTB address through to Linux.  Retain
+# the fixed address for boot flows that load the DTB separately.
+ifndef FW_FDT_PATH
 FW_PAYLOAD_FDT_ADDR=0x82200000
+endif
 # FW_PAYLOAD_ALIGN=0x1000
 
 FW_FDT_PAYLOAD_OFFSET=0x2200000

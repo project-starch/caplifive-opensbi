@@ -101,9 +101,10 @@ payload_bin:
 .align 4
 .globl fdt_bin
 fdt_bin:
-#ifdef FW_FDT_PATH
-    .incbin FW_FDT_PATH
-#else
-    .word 0
-#endif
+//#ifdef FW_FDT_PATH
+    //.incbin FW_FDT_PATH
+    .incbin FW_PAYLOAD_FDT_PATH
+//#else
+//    .word 0
+//#endif
 #endif

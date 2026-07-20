@@ -35,6 +35,12 @@ firmware-genflags-y += -DFW_FDT_PADDING=$(FW_FDT_PADDING)
 endif
 endif
 
+ifdef FW_PAYLOAD_FDT_PATH
+  firmware-genflags-$(FW_PAYLOAD) += \
+  	-DFW_PAYLOAD_FDT_PATH=\"$(FW_PAYLOAD_FDT_PATH)\"
+endif
+
+
 firmware-bins-$(FW_DYNAMIC) += fw_dynamic.bin
 
 firmware-bins-$(FW_JUMP) += fw_jump.bin
