@@ -1081,7 +1081,7 @@ sbi_hart_switch_mode(unsigned long arg0, unsigned long arg1,
 		}
 	}
 
-
+	
 	sbi_capstone_init(arg0, arg1);
 	__builtin_unreachable();
 }

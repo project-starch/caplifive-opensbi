@@ -50,7 +50,8 @@ endif
 # fw_next_arg1() passes the embedded DTB address through to Linux.  Retain
 # the fixed address for boot flows that load the DTB separately.
 ifndef FW_FDT_PATH
-FW_PAYLOAD_FDT_ADDR=0x82200000
+#FW_PAYLOAD_FDT_ADDR=0x82200000
+FW_PAYLOAD_FDT_ADDR=0x81800000
 endif
 # FW_PAYLOAD_ALIGN=0x1000
 

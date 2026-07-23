@@ -27,7 +27,7 @@ static void handle_hw_int(__domasync void *ra) {
     __domasync void *main_thread_ca;
     unsigned cause;
 
-    debug_counter_tick(DEBUG_COUNTER_H_INT);
+    //debug_counter_tick(DEBUG_COUNTER_H_INT);
 
     __asm__ volatile ("csrr %0, cic" : "=r"(cause));
     cause = (cause << 1) >> 1;
