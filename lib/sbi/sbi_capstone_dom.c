@@ -29,7 +29,19 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     // // trap vector
     C_WRITE_CCSR(ctvec, _cap_trap_entry);
 
+    // UART capability, for making monitor errors visible on the console (I-4).
+    // Minted exactly like the timer capabilities below: a non-linear cap split out
+    // of the genesis region. CAPENTER hands a0 = [0, _cap_text_start) and the
+    // firmware links at 0x8xxxxxxx, so 0x10000000 (ARIANE_UART_ADDR) falls inside
+    // region 0 -- the same region 0x200bff8 (mtime) comes out of. Done FIRST so that
+    // a failure in one of the splits below can itself be reported.
+    __asm__ ("fence.i");
+    unsigned *cap_uart = split_out_cap(CAPSTONE_UART_BASE, CAPSTONE_UART_LEN, 0);
+    capstone_uart = cap_uart;
+    capstone_uart_ready = 1;
+
     // timer capabilities
+    __asm__ ("fence.i");
     unsigned *cap = split_out_cap(SBI_MTIME_ADDR, 8, 0);
     mtime = cap;
     __asm__ ("fence.i");
