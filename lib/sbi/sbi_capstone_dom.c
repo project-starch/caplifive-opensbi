@@ -25,6 +25,14 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     for(i = 3; i < CAPSTONE_MAX_REGION_N; i += 1) {
         region_cpmp[i] = -1;
     }
+    /* the three genesis regions are CPMP-resident and never appended: mark them live by hand
+       and every other slot dead, exactly as the -1 loops above do (never rely on zero-init) */
+    region_live[0] = 1;
+    region_live[1] = 1;
+    region_live[2] = 1;
+    for(i = 3; i < CAPSTONE_MAX_REGION_N; i += 1) {
+        region_live[i] = 0;
+    }
 
     // trap vector
     C_WRITE_CCSR(ctvec, _cap_trap_entry);
