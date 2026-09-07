@@ -37,6 +37,7 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     // // trap vector
     C_WRITE_CCSR(ctvec, _cap_trap_entry);
 
+#ifdef CAPSTONE_TARGET_FPGA
     // UART capability, for making monitor errors visible on the console (I-4).
     // Minted exactly like the timer capabilities below: a non-linear cap split out
     // of the genesis region. CAPENTER hands a0 = [0, _cap_text_start) and the
@@ -47,24 +48,35 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     unsigned *cap_uart = split_out_cap(CAPSTONE_UART_BASE, CAPSTONE_UART_LEN, 0);
     capstone_uart = cap_uart;
     capstone_uart_ready = 1;
+#endif
 
     // timer capabilities
+#ifdef CAPSTONE_TARGET_FPGA
     __asm__ ("fence.i");
+#endif
     unsigned *cap = split_out_cap(SBI_MTIME_ADDR, 8, 0);
     mtime = cap;
+#ifdef CAPSTONE_TARGET_FPGA
     __asm__ ("fence.i");
+#endif
     cap = split_out_cap(SBI_MTIMECMP_ADDR, 8, 0);
     mtimecmp = cap;
 
     // int handler domain
+#ifdef CAPSTONE_TARGET_FPGA
     __asm__ ("fence.i");
+#endif
     __linear unsigned *cap_int_stack  = split_out_cap(int_handler_stack,
         int_handler_stack_end - int_handler_stack, 1);
+#ifdef CAPSTONE_TARGET_FPGA
     __asm__ ("fence.i");
+#endif
     cap_int_stack = __setcursor(cap_int_stack, int_handler_stack_end);
     __linear unsigned *cap_int_seal = split_out_cap(int_handler_seal_region,
         int_handler_seal_region_end - int_handler_seal_region, 1);
+#ifdef CAPSTONE_TARGET_FPGA
     __asm__ ("fence.i");
+#endif
     unsigned *cap_int_code = split_out_cap(_cap_int_handler_text_start,
         _cap_int_handler_text_end - _cap_int_handler_text_start, 0);
     cap_int_code = __setcursor(cap_int_code, __int_handler_entry_entry);
@@ -98,4 +110,7 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
 
     // re-enable interrupts
     // __asm__("csrs mstatus, %0" :: "r"(MSTATUS_MIE));
+#ifdef CAPSTONE_TARGET_QEMU
+    __asm__("csrs mstatus, %0" :: "r"(MSTATUS_MIE));
+#endif
 }

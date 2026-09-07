@@ -13,6 +13,14 @@ sbi_capstone_init:
     # csrr s2, mepc
     # csrw mstatus, s0
     # csrr s2, mscratch
+#ifdef CAPSTONE_TARGET_QEMU
+    csrr s0, mstatus
+    li s1, -1
+    xori s1, s1, MSTATUS_MIE
+    and s0, s0, s1
+    csrr s2, mepc
+    csrw mstatus, s0
+#endif
 
     # to avoid clobbering during capenter
     mv a4, a0
@@ -83,7 +91,11 @@ sbi_capstone_init_cap:
 .section .data
 .align 4
 dom_stack:
+#ifdef CAPSTONE_TARGET_FPGA
 .zero 4096*2
+#else
+.zero 4096 * 16
+#endif
 .align 4
 dom_stack_end:
 

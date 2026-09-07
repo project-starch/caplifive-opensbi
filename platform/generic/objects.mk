@@ -8,9 +8,11 @@
 #
 
 # Compiler flags
-platform-cppflags-y =
-platform-cflags-y =
-platform-asflags-y =
+# This platform IS the QEMU target of the Capstone monitor (capstone_target.h); the QEMU-private
+# debug counters stay compiled in here, as they always were on the QEMU line.
+platform-cppflags-y = -DCAPSTONE_TARGET_QEMU -DCAPSTONE_DEBUG_ENABLE
+platform-cflags-y = -DCAPSTONE_TARGET_QEMU -DCAPSTONE_DEBUG_ENABLE
+platform-asflags-y = -DCAPSTONE_TARGET_QEMU -DCAPSTONE_DEBUG_ENABLE
 platform-ldflags-y =
 
 # Command for platform specific "make run"

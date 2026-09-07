@@ -20,14 +20,29 @@
 		PROVIDE(_text_start = .);
 		*(.entry)
 		*(.text)
+#ifdef CAPSTONE_TARGET_FPGA
 		. = ALIGN(0x1000);
+#else
+		. = ALIGN(4);
+#endif
 		PROVIDE(_cap_text_start = .);
 		*(.cap_text)
+#ifdef CAPSTONE_TARGET_FPGA
 		. = ALIGN(0x1000);
+#else
+		. = ALIGN(8);
+#endif
 		PROVIDE(_cap_text_end = .);
+#ifdef CAPSTONE_TARGET_QEMU
+		. = ALIGN(4);
+#endif
 		PROVIDE(_cap_int_handler_text_start = .);
 		*(.cap_int_handler_text)
+#ifdef CAPSTONE_TARGET_FPGA
 		. = ALIGN(0x1000);
+#else
+		. = ALIGN(8);
+#endif
 		PROVIDE(_cap_int_handler_text_end = .);
 		PROVIDE(_text_end = .);
 	}
