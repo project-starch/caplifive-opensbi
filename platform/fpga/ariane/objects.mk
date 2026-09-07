@@ -6,9 +6,13 @@
 #
 
 # Compiler flags
-platform-cppflags-y =
-platform-cflags-y =
-platform-asflags-y =
+# This platform IS the FPGA target of the Capstone monitor: the monitor sources (lib/sbi/capstone-sbi,
+# included by sbi_capstone_init.S and compiled by capstone-c for the generated .c.S) select their
+# per-target constants on this define (capstone_target.h). The buildroot Makefile passes the same
+# define to the capstone-c regeneration through CAPSTONE_EXTRA_DEFS.
+platform-cppflags-y = -DCAPSTONE_TARGET_FPGA
+platform-cflags-y = -DCAPSTONE_TARGET_FPGA
+platform-asflags-y = -DCAPSTONE_TARGET_FPGA
 platform-ldflags-y =
 
 # Object to build
