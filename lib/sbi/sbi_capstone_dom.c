@@ -50,33 +50,23 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     capstone_uart_ready = 1;
 #endif
 
+    /* The fence.i that used to follow each split_out_cap/write below was removed 2026-09-08
+       (Phase B item 8): neither a fetch-side capability cache nor icache/data non-coherence
+       explains them (rtl-oracle, R-26 notes), and a firmware-only board boot without them ran the
+       control and six BEEBS rungs at their oracles. The one in the UART mint above stays: never
+       tested for removal. */
     // timer capabilities
-#ifdef CAPSTONE_TARGET_FPGA
-    __asm__ ("fence.i");
-#endif
     unsigned *cap = split_out_cap(SBI_MTIME_ADDR, 8, 0);
     mtime = cap;
-#ifdef CAPSTONE_TARGET_FPGA
-    __asm__ ("fence.i");
-#endif
     cap = split_out_cap(SBI_MTIMECMP_ADDR, 8, 0);
     mtimecmp = cap;
 
     // int handler domain
-#ifdef CAPSTONE_TARGET_FPGA
-    __asm__ ("fence.i");
-#endif
     __linear unsigned *cap_int_stack  = split_out_cap(int_handler_stack,
         int_handler_stack_end - int_handler_stack, 1);
-#ifdef CAPSTONE_TARGET_FPGA
-    __asm__ ("fence.i");
-#endif
     cap_int_stack = __setcursor(cap_int_stack, int_handler_stack_end);
     __linear unsigned *cap_int_seal = split_out_cap(int_handler_seal_region,
         int_handler_seal_region_end - int_handler_seal_region, 1);
-#ifdef CAPSTONE_TARGET_FPGA
-    __asm__ ("fence.i");
-#endif
     unsigned *cap_int_code = split_out_cap(_cap_int_handler_text_start,
         _cap_int_handler_text_end - _cap_int_handler_text_start, 0);
     cap_int_code = __setcursor(cap_int_code, __int_handler_entry_entry);
