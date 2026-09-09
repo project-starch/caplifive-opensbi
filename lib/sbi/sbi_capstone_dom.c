@@ -44,7 +44,8 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     // firmware links at 0x8xxxxxxx, so 0x10000000 (ARIANE_UART_ADDR) falls inside
     // region 0 -- the same region 0x200bff8 (mtime) comes out of. Done FIRST so that
     // a failure in one of the splits below can itself be reported.
-    __asm__ ("fence.i");
+    /* The fence.i that preceded this split was dropped 2026-09-09 with the three CCSRRW-adjacent ones in
+     * sbi_capstone.S (R-26: the RTL flushes after every CCSRRW since 9d8797560); booted clean as sw47. */
     unsigned *cap_uart = split_out_cap(CAPSTONE_UART_BASE, CAPSTONE_UART_LEN, 0);
     capstone_uart = cap_uart;
     capstone_uart_ready = 1;
