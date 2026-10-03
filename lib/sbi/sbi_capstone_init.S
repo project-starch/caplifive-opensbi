@@ -92,7 +92,17 @@ sbi_capstone_init_cap:
 .align 4
 dom_stack:
 #ifdef CAPSTONE_TARGET_FPGA
+/* dom_init (capstone-c) carves EVERY monitor global out of the top of this stack before cap_env_init runs, so
+   the stack must hold the globals plus the real stack. The board build's globals take 4.84 KiB, so 8 KiB holds
+   them. The context-slot tables of CAPSTONE_SUPERVISED_CALL take 21.05 KiB (2026-10-03, counted from the
+   generated dom_init): at 8 KiB the carve ran past the stack's base and faulted before the trap vector existed,
+   a silent hang right after OpenSBI's banner (board boot supmon-c5). 32 KiB holds them with ~11 KiB to spare and
+   keeps the firmware's RW inside the 128 KiB M-mode region the DTS reserves (0x80080000-0x8009ffff). */
+#ifdef CAPSTONE_SUPERVISED_CALL
+.zero 4096*8
+#else
 .zero 4096*2
+#endif
 #else
 .zero 4096 * 16
 #endif
