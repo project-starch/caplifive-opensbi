@@ -50,6 +50,9 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     capstone_uart = cap_uart;
     capstone_uart_ready = 1;
 #endif
+#ifdef CAPSTONE_BOOT_TRACE
+    capstone_report(0x42543030, 0);   /* "BT00": cap_env_init reached, UART capability minted */
+#endif
 
     /* The fence.i that used to follow each split_out_cap/write below was removed 2026-09-08
        (Phase B item 8): neither a fetch-side capability cache nor icache/data non-coherence
@@ -99,13 +102,22 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     C_READ_CSR(mepc, mepc_val);
     C_WRITE_CCSR(cepc, mepc_val);
 
+#ifdef CAPSTONE_BOOT_TRACE
+    capstone_report(0x42543031, 1);   /* "BT01": before the save-area carve */
+#endif
 #ifdef CAPSTONE_SUPERVISOR_CSR_EVENTS
     // supervised CALL on silicon: the monitor's private save area (capstone-sbi supervised_invoke)
     sup_save_area = split_out_cap(sup_save_region, sup_save_region_end - sup_save_region, 1);
 #endif
+#ifdef CAPSTONE_BOOT_TRACE
+    capstone_report(0x42543032, 2);   /* "BT02": after the save-area carve */
+#endif
 
     // re-enable interrupts
     // __asm__("csrs mstatus, %0" :: "r"(MSTATUS_MIE));
+#ifdef CAPSTONE_BOOT_TRACE
+    capstone_report(0x42543033, 3);   /* "BT03": cap_env_init done */
+#endif
 #ifdef CAPSTONE_TARGET_QEMU
     __asm__("csrs mstatus, %0" :: "r"(MSTATUS_MIE));
 #endif
