@@ -110,3 +110,12 @@ int_handler_seal_region:
 .zero 16 * 64
 .align 4
 int_handler_seal_region_end:
+
+/* Supervised CALL on silicon: the monitor's PRIVATE save area for the SAVE/RESTORE walks (cssupervise rs2:
+   a LINEAR RW capability, >= 1 KiB, 16-byte aligned). Carved in cap_env_init when
+   CAPSTONE_SUPERVISOR_CSR_EVENTS is defined; otherwise unused zeros. */
+.align 6
+sup_save_region:
+.zero 1024
+.align 4
+sup_save_region_end:

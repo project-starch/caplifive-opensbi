@@ -99,6 +99,11 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     C_READ_CSR(mepc, mepc_val);
     C_WRITE_CCSR(cepc, mepc_val);
 
+#ifdef CAPSTONE_SUPERVISOR_CSR_EVENTS
+    // supervised CALL on silicon: the monitor's private save area (capstone-sbi supervised_invoke)
+    sup_save_area = split_out_cap(sup_save_region, sup_save_region_end - sup_save_region, 1);
+#endif
+
     // re-enable interrupts
     // __asm__("csrs mstatus, %0" :: "r"(MSTATUS_MIE));
 #ifdef CAPSTONE_TARGET_QEMU
