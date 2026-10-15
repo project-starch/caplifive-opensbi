@@ -7,6 +7,30 @@ __dominit void dom_init() { }
 
 void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2) {
     int i;
+#ifdef CAPSTONE_TARGET_FPGA
+    unsigned k;
+    unsigned boot_n;
+    __linear unsigned *cap_above;
+    /* R-55 (regions): the genesis regions' NOMINAL bounds (sbi_capstone_init.S: CAPENTER's a0, the boot stack's two
+       SPLITs) and every other slot's "not known", set before any carve reads them; never rely on zero-init. The
+       full-scheme encoder rounds region 1's decoded base below _cap_text_end (it is the lower piece of a SPLIT of a1
+       = [_cap_text_end, 2^40)); the cursorless one does not. That is what turns exact_regions on: on a cursorless
+       bitstream (0568f93a9) the table behaves exactly as before. */
+    exact_regions = 0;
+    if(cap_base(cap1) != _cap_text_end) {
+        exact_regions = 1;
+    }
+    for(k = 0; k < CAPSTONE_MAX_REGION_N; k += 1) {
+        region_nbase[k] = 0;
+        region_nend[k] = 0;
+    }
+    region_nbase[0] = 0;
+    region_nend[0] = _cap_text_start;
+    region_nbase[1] = _cap_text_end;
+    region_nend[1] = dom_stack;
+    region_nbase[2] = dom_stack_end;
+    region_nend[2] = 0x10000000000;
+#endif
 
     // regions
     region_n = 3;
@@ -88,6 +112,21 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     unsigned *cap_int_code = split_out_cap(_cap_int_handler_text_start,
         _cap_int_handler_text_end - _cap_int_handler_text_start, 0);
     cap_int_code = __setcursor(cap_int_code, __int_handler_entry_entry);
+#ifdef CAPSTONE_TARGET_FPGA
+    /* R-55 (regions): end Linux's region at the DRAM window. The part above it is kept as its own slot, so nothing
+       S-mode could reach before is lost, and every remainder carved from Linux's region later is at most 1 GiB, whose
+       granule is at most 1 MiB, CMA's alignment cap. Then cut every slot the boot left into exact pieces. Both only
+       when the encoder rounds. */
+    if(exact_regions != 0) {
+        cap_above = split_out_cap(CAPSTONE_DRAM_TOP, 0x10000000000 - CAPSTONE_DRAM_TOP, 1);
+        region_append(cap_above, CAPSTONE_DRAM_TOP, 0x10000000000);
+        exact_regions = 2;   /* from here on every carve's remainders are cut exact */
+        boot_n = region_n;
+        for(k = 0; k < boot_n; k += 1) {
+            region_make_exact(k);
+        }
+    }
+#endif
 
     __linear unsigned **cap_int_seal_cap_writer = cap_int_seal;
     *cap_int_seal_cap_writer = cap_int_code; cap_int_seal_cap_writer += 16;
