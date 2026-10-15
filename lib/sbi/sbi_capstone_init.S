@@ -101,7 +101,9 @@ dom_stack:
 #ifdef CAPSTONE_SUPERVISED_CALL
 .zero 4096*8
 #else
-.zero 4096*2
+/* 16 KiB since R-55 (regions, 2026-10-15): the 127-slot region table and its nominal bounds add about 3.5 KiB of
+   globals to the 4.84 KiB that 8 KiB held. The firmware's RW still ends below 0x800A0000. */
+.zero 4096*4
 #endif
 #else
 .zero 4096 * 16
