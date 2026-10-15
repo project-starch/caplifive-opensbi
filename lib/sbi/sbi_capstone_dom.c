@@ -47,6 +47,8 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     /* The fence.i that preceded this split was dropped 2026-09-09 with the three CCSRRW-adjacent ones in
      * sbi_capstone.S (R-26: the RTL flushes after every CCSRRW since 9d8797560); booted clean as sw47. */
     unsigned *cap_uart = split_out_cap(CAPSTONE_UART_BASE, CAPSTONE_UART_LEN, 0);
+    /* R-55: set, not assumed -- see the mtime carve below. */
+    cap_uart = __setcursor(cap_uart, CAPSTONE_UART_BASE);
     capstone_uart = cap_uart;
     capstone_uart_ready = 1;
 #endif
@@ -58,8 +60,20 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
        tested for removal. */
     // timer capabilities
     unsigned *cap = split_out_cap(SBI_MTIME_ADDR, 8, 0);
+#ifdef CAPSTONE_TARGET_FPGA
+    /* R-55 (2026-10-15): SPLIT gives the piece split_out_cap returns its parent's DECODED start as cursor. Under a
+       full-scheme bounds encoder (the FP bitstreams' option (b), the Sublet format) that start rounds below the
+       carve point: mtime came out as [0x2000000, 0x200c000) with its cursor on the CLINT's msip, so
+       handle_exception's `*mtime` emulated every S-mode rdtime as 0 and Linux hung in start_kernel. A carve
+       that is dereferenced at its cursor sets the cursor itself. FPGA only: QEMU's bases stay exact, its cursor
+       is already here, and its monitor stays byte-identical. */
+    cap = __setcursor(cap, SBI_MTIME_ADDR);
+#endif
     mtime = cap;
     cap = split_out_cap(SBI_MTIMECMP_ADDR, 8, 0);
+#ifdef CAPSTONE_TARGET_FPGA
+    cap = __setcursor(cap, SBI_MTIMECMP_ADDR);   /* R-55: exact under today's layout; set, not assumed */
+#endif
     mtimecmp = cap;
 
     // int handler domain
