@@ -10,9 +10,12 @@
 # included by sbi_capstone_init.S and compiled by capstone-c for the generated .c.S) select their
 # per-target constants on this define (capstone_target.h). The buildroot Makefile passes the same
 # define to the capstone-c regeneration through CAPSTONE_EXTRA_DEFS.
-platform-cppflags-y = -DCAPSTONE_TARGET_FPGA
-platform-cflags-y = -DCAPSTONE_TARGET_FPGA
-platform-asflags-y = -DCAPSTONE_TARGET_FPGA
+# CAPSTONE_PLATFORM_DEFS (make variable, empty by default): the monitor build's defines for OpenSBI's own C and
+# assembly, e.g. -DCAPSTONE_SUPERVISED_CALL, which sizes dom_stack in sbi_capstone_init.S. capstone-c gets the same
+# defines through CAPSTONE_EXTRA_DEFS; without this the .S never sees them (2026-10-03, the dom_stack gate caught it).
+platform-cppflags-y = -DCAPSTONE_TARGET_FPGA $(CAPSTONE_PLATFORM_DEFS)
+platform-cflags-y = -DCAPSTONE_TARGET_FPGA $(CAPSTONE_PLATFORM_DEFS)
+platform-asflags-y = -DCAPSTONE_TARGET_FPGA $(CAPSTONE_PLATFORM_DEFS)
 platform-ldflags-y =
 
 # Object to build
