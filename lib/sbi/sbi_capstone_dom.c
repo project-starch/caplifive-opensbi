@@ -7,6 +7,9 @@ __dominit void dom_init() { }
 
 void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2) {
     int i;
+#ifdef CAPSTONE_QUANTUM_PRINT
+    unsigned qnt_q;
+#endif
 #ifdef CAPSTONE_TARGET_FPGA
     unsigned k;
     unsigned boot_n;
@@ -168,6 +171,19 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
 
     // re-enable interrupts
     // __asm__("csrs mstatus, %0" :: "r"(MSTATUS_MIE));
+#ifdef CAPSTONE_BOOT_QUANTUM
+    /* S-26's silicon arm (2026-10-19): csupquantum (0x7C3) resets to 0, and its only writer is the monitor's
+       supervised_invoke, which a classic domain call reaches. A virtual context entered before any classic call then
+       loads a 0 countdown and is preempted before its first instruction. This writes the classic call's value once at
+       boot, so a cold boot's first virtual context gets a non-zero quantum. Off unless the arm's firmware defines it. */
+    C_WRITE_CSR(0x7c3, CAPSTONE_BOOT_QUANTUM);
+#endif
+#ifdef CAPSTONE_QUANTUM_PRINT
+    /* Both arms of the S-26 pair print 0x7C3 as boot leaves it ("QNT0"): 0 in the control, the written value in the
+       variant. */
+    __asm__ volatile ("csrr %0, 0x7c3" : "=r"(qnt_q));
+    capstone_report(0x514e5430, qnt_q);   /* "QNT0" */
+#endif
 #ifdef CAPSTONE_BOOT_TRACE
     capstone_report(0x42543033, 3);   /* "BT03": cap_env_init done */
 #endif
