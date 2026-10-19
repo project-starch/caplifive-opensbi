@@ -5,6 +5,14 @@
 
 __dominit void dom_init() { }
 
+#ifdef CAPSTONE_TARGET_FPGA
+/* S-30 (2026-10-19): the top of Linux's RAM, the DTB's memory@80000000 (reg size 0x3c2d2000). Above it, below the DRAM
+   window's top, lie the shadow-tag array (CAP_TAG_MEM_BASE 0xBC2D2D2D) and the revocation-node pool
+   (CAP_REVNODE_MEM_BASE 0xBFF00000), which wt_axi_adapter.sv leaves to whoever the CPMP lets reach them. */
+#define CAPSTONE_LINUX_RAM_TOP 0xbc2d2000
+__linear void *s30_held;   /* [CAPSTONE_LINUX_RAM_TOP, CAPSTONE_DRAM_TOP), held by the monitor, never in the region table */
+#endif
+
 void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2) {
     int i;
 #ifdef CAPSTONE_QUANTUM_PRINT
@@ -14,6 +22,7 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
     unsigned k;
     unsigned boot_n;
     __linear unsigned *cap_above;
+    __linear void *held;
     /* R-55 (regions): the genesis regions' NOMINAL bounds (sbi_capstone_init.S: CAPENTER's a0, the boot stack's two
        SPLITs) and every other slot's "not known", set before any carve reads them; never rely on zero-init. The
        full-scheme encoder rounds region 1's decoded base below _cap_text_end (it is the lower piece of a SPLIT of a1
@@ -129,6 +138,19 @@ void cap_env_init(__linear void *cap0, __linear void *cap1, __linear void *cap2)
             region_make_exact(k);
         }
     }
+    /* S-30 (2026-10-19): Linux's region also covered [CAPSTONE_LINUX_RAM_TOP, CAPSTONE_DRAM_TOP), the tag store and the
+       revocation-node pool, so S-mode could read and write both (/dev/mem or a module). Ending the region lower is not
+       the fix: swap_cpmp loads ANY live slot not yet loaded that covers an S-mode fault, with no owner or permission
+       filter, so a remainder left in the table would stay reachable by faulting into it. The range is carved LINEAR
+       and held here instead (split_out_cap appends only a non-linear piece, or a middle carve's right-hand
+       remainder), on every bitstream; after the exact cut above, so Linux's new top piece is cut exact too. The held
+       piece's decoded bounds are reported (S30H base, then end); its base may round below CAPSTONE_LINUX_RAM_TOP, which
+       costs nothing, since the piece is never loaded. Gated offline by r55-regions/replay.py --hold: OVERLAP 0, no
+       inexact piece, Linux's top slot exact at [0xbc200000, 0xbc2d2000), 112 slots on a2. */
+    held = split_out_cap(CAPSTONE_LINUX_RAM_TOP, CAPSTONE_DRAM_TOP - CAPSTONE_LINUX_RAM_TOP, 1);
+    capstone_report(0x53333048, cap_base(held));   /* "S30H" */
+    capstone_report(0x53333048, cap_end(held));
+    s30_held = held;
 #endif
 
     __linear unsigned **cap_int_seal_cap_writer = cap_int_seal;
