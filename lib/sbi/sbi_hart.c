@@ -85,6 +85,27 @@ static void mstatus_init(struct sbi_scratch *scratch)
 #endif
 	}
 
+#ifdef CAPSTONE_HPM_EVENTS
+	/*
+	 * Capstone performance builds only: CVA6's six counters run from boot on one fixed event set, which the
+	 * capstone_vm bench build (CAPSTONE_VM_BENCH_HPM) reads around every context window. Nothing else on the
+	 * board changes them: the FPGA kernel has no perf driver, so no SBI PMU call reaches sbi_pmu.c, and
+	 * sbi_pmu_exit (hart stop) is the only other writer of mcountinhibit. The clear is guarded exactly as
+	 * the inhibit above is, so it runs whenever that one did.
+	 * Events (capstone-ariane perf_counters.sv, a 5-bit mhpmevent field; no privilege filter):
+	 *   mhpmcounter3 = 1 L1 I-cache miss, 4 = 2 L1 D-cache miss, 5 = 4 DTLB miss,
+	 *   6 = 10 branch mispredict, 7 = 22 issue stall (stall_issue), 8 = 14 scoreboard full.
+	 */
+	csr_write(CSR_MHPMEVENT3, 1);
+	csr_write(CSR_MHPMEVENT4, 2);
+	csr_write(CSR_MHPMEVENT5, 4);
+	csr_write(CSR_MHPMEVENT6, 10);
+	csr_write(CSR_MHPMEVENT7, 22);
+	csr_write(CSR_MHPMEVENT8, 14);
+	if (sbi_hart_priv_version(scratch) >= SBI_HART_PRIV_VER_1_11)
+		csr_write(CSR_MCOUNTINHIBIT, csr_read(CSR_MCOUNTINHIBIT) & ~0x1F8UL);
+#endif
+
 	if (sbi_hart_has_extension(scratch, SBI_HART_EXT_SMSTATEEN)) {
 		mstateen_val = csr_read(CSR_MSTATEEN0);
 #if __riscv_xlen == 32
