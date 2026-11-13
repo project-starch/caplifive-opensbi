@@ -96,12 +96,27 @@ static void mstatus_init(struct sbi_scratch *scratch)
 	 *   mhpmcounter3 = 1 L1 I-cache miss, 4 = 2 L1 D-cache miss, 5 = 4 DTLB miss,
 	 *   6 = 10 branch mispredict, 7 = 22 issue stall (stall_issue), 8 = 14 scoreboard full.
 	 */
+#ifdef CAPSTONE_HPM_EVENTS_TAG
+	/*
+	 * The tag-path set, for bitstreams that carry the tag adapter's HPM events 24-28 (capstone-ariane
+	 * perf/twc-reach): 3 = 24 tag read issued, 4 = 25 marked-page load freed by the tag-word cache,
+	 * 5 = 26 tag write issued, 6 = 27 page fill started, 7 = 28 cycles held in the tag phase,
+	 * 8 = 2 L1 D-cache miss. On a bitstream without them, events 24-28 count nothing.
+	 */
+	csr_write(CSR_MHPMEVENT3, 24);
+	csr_write(CSR_MHPMEVENT4, 25);
+	csr_write(CSR_MHPMEVENT5, 26);
+	csr_write(CSR_MHPMEVENT6, 27);
+	csr_write(CSR_MHPMEVENT7, 28);
+	csr_write(CSR_MHPMEVENT8, 2);
+#else
 	csr_write(CSR_MHPMEVENT3, 1);
 	csr_write(CSR_MHPMEVENT4, 2);
 	csr_write(CSR_MHPMEVENT5, 4);
 	csr_write(CSR_MHPMEVENT6, 10);
 	csr_write(CSR_MHPMEVENT7, 22);
 	csr_write(CSR_MHPMEVENT8, 14);
+#endif
 	if (sbi_hart_priv_version(scratch) >= SBI_HART_PRIV_VER_1_11)
 		csr_write(CSR_MCOUNTINHIBIT, csr_read(CSR_MCOUNTINHIBIT) & ~0x1F8UL);
 #endif
