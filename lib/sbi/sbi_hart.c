@@ -101,7 +101,12 @@ static void mstatus_init(struct sbi_scratch *scratch)
 	csr_write(CSR_MHPMEVENT5, 4);
 	csr_write(CSR_MHPMEVENT6, 10);
 	csr_write(CSR_MHPMEVENT7, 22);
+#ifdef CAPSTONE_HPM_EVENTS_NESTED
+	/* Nested-allocator runs: 8 = 23 (verdict-cache miss replays) in place of 14 (scoreboard full). */
+	csr_write(CSR_MHPMEVENT8, 23);
+#else
 	csr_write(CSR_MHPMEVENT8, 14);
+#endif
 	if (sbi_hart_priv_version(scratch) >= SBI_HART_PRIV_VER_1_11)
 		csr_write(CSR_MCOUNTINHIBIT, csr_read(CSR_MCOUNTINHIBIT) & ~0x1F8UL);
 #endif
