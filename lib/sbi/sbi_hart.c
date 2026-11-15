@@ -96,12 +96,24 @@ static void mstatus_init(struct sbi_scratch *scratch)
 	 *   mhpmcounter3 = 1 L1 I-cache miss, 4 = 2 L1 D-cache miss, 5 = 4 DTLB miss,
 	 *   6 = 10 branch mispredict, 7 = 22 issue stall (stall_issue), 8 = 14 scoreboard full.
 	 */
+#ifdef CAPSTONE_HPM_EVENTS_PAGED
+	/* Phase 1 paged-table runs (6-bit event field, capstone-ariane rtl/paged-table): 3 = 29 record-TLB miss (walk
+	 * started), 4 = 30 walk cycles, 5 = 31 record access in paged mode, 6 = 33 cause-30 grow, 7 = 23 verdict-cache
+	 * miss replays, 8 = 2 L1 D-cache miss (control). */
+	csr_write(CSR_MHPMEVENT3, 29);
+	csr_write(CSR_MHPMEVENT4, 30);
+	csr_write(CSR_MHPMEVENT5, 31);
+	csr_write(CSR_MHPMEVENT6, 33);
+	csr_write(CSR_MHPMEVENT7, 23);
+	csr_write(CSR_MHPMEVENT8, 2);
+#else
 	csr_write(CSR_MHPMEVENT3, 1);
 	csr_write(CSR_MHPMEVENT4, 2);
 	csr_write(CSR_MHPMEVENT5, 4);
 	csr_write(CSR_MHPMEVENT6, 10);
 	csr_write(CSR_MHPMEVENT7, 22);
 	csr_write(CSR_MHPMEVENT8, 14);
+#endif
 	if (sbi_hart_priv_version(scratch) >= SBI_HART_PRIV_VER_1_11)
 		csr_write(CSR_MCOUNTINHIBIT, csr_read(CSR_MCOUNTINHIBIT) & ~0x1F8UL);
 #endif
