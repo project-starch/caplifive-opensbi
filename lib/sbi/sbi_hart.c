@@ -96,7 +96,12 @@ static void mstatus_init(struct sbi_scratch *scratch)
 	 *   mhpmcounter3 = 1 L1 I-cache miss, 4 = 2 L1 D-cache miss, 5 = 4 DTLB miss,
 	 *   6 = 10 branch mispredict, 7 = 22 issue stall (stall_issue), 8 = 14 scoreboard full.
 	 */
+#ifdef CAPSTONE_HPM_EVENTS_IFEMPTY
+	/* Fetch-placement runs: 3 = 15 (if_empty_i, instruction fetch empty) in place of 1 (L1 I-cache miss). */
+	csr_write(CSR_MHPMEVENT3, 15);
+#else
 	csr_write(CSR_MHPMEVENT3, 1);
+#endif
 	csr_write(CSR_MHPMEVENT4, 2);
 	csr_write(CSR_MHPMEVENT5, 4);
 	csr_write(CSR_MHPMEVENT6, 10);
