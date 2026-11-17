@@ -96,7 +96,18 @@ static void mstatus_init(struct sbi_scratch *scratch)
 	 *   mhpmcounter3 = 1 L1 I-cache miss, 4 = 2 L1 D-cache miss, 5 = 4 DTLB miss,
 	 *   6 = 10 branch mispredict, 7 = 22 issue stall (stall_issue), 8 = 14 scoreboard full.
 	 */
-#ifdef CAPSTONE_HPM_EVENTS_PAGED
+#if defined(CAPSTONE_HPM_EVENTS_RCACHE)
+	/* Section 5 phase 2 record-cache runs (B5a, capstone-ariane 6e82d7bd2, 6-bit event field): 3 = 34 record-cache
+	 * read hit, 4 = 35 record-cache read miss, 5 = 31 record access in paged mode, 6 = 37 record-cache fill read,
+	 * 7 = 36 record-cache write lookup hit, 8 = 2 L1 D-cache miss (control). The identity the rtl lane grades is
+	 * ev31 - ev35 - ev37 >= 0; the hit rate is ev34 / (ev34 + ev35). */
+	csr_write(CSR_MHPMEVENT3, 34);
+	csr_write(CSR_MHPMEVENT4, 35);
+	csr_write(CSR_MHPMEVENT5, 31);
+	csr_write(CSR_MHPMEVENT6, 37);
+	csr_write(CSR_MHPMEVENT7, 36);
+	csr_write(CSR_MHPMEVENT8, 2);
+#elif defined(CAPSTONE_HPM_EVENTS_PAGED)
 	/* Phase 1 paged-table runs (6-bit event field, capstone-ariane rtl/paged-table): 3 = 29 record-TLB miss (walk
 	 * started), 4 = 30 walk cycles, 5 = 31 record access in paged mode, 6 = 33 cause-30 grow, 7 = 23 verdict-cache
 	 * miss replays, 8 = 2 L1 D-cache miss (control). */
