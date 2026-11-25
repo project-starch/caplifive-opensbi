@@ -14,7 +14,7 @@ cpu="rv64,sstc=false,x-capstone-test-csrs=true,x-capstone-supervisor-refs=true,x
 mkdir -p "$work"
 for v in y n; do
     make -s -C "$src" -j12 PLATFORM=generic CROSS_COMPILE=${CROSS_COMPILE:-riscv64-unknown-elf-} \
-        FW_CAPSTONE_KEEP_TAGS=$v O="$work/fw-$v" > "$work/fw-$v.log" 2>&1
+        FW_CAPSTONE_KEEP_TAGS=$v ${FW_EXTRA:-} O="$work/fw-$v" > "$work/fw-$v.log" 2>&1
 done
 build() { riscv64-unknown-elf-gcc -march=rv64gc -mabi=lp64d -nostdlib -nostartfiles "$@"; }
 build -DCASE=0 -Wl,-T,"$here/link.ld" "$here/holder.S" -o "$work/case0.elf"

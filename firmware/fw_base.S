@@ -608,21 +608,103 @@ memmove:
 memcmp:
 	tail	sbi_memcmp
 
-#ifdef FW_CAPSTONE_KEEP_TAGS
+#if defined(FW_CAPSTONE_KEEP_TAGS) || defined(FW_FAST_RDTIME)
 #if __riscv_xlen != 64
-#error FW_CAPSTONE_KEEP_TAGS needs RV64
+#error FW_CAPSTONE_KEEP_TAGS and FW_FAST_RDTIME need RV64
 #endif
 #define KT_LDC(rd, base, off)	.insn i 0x5b, 3, rd, base, off
 #define KT_STC(src, base, off)	.insn s 0x5b, 4, src, off(base)
 /* x0..x31's 16-byte slots, below this hart's scratch (16-byte aligned, checked at boot) */
 #define KT_FRAME		(-512)
-#define KT_SLOT(n)		(KT_FRAME + 16 * (n))
+#define KT_SLOT(n)		(KT_FRAME+16*(n))
 /* the integer frame the C part sees, below the slots, 16-byte aligned */
 #define KT_REGS			(KT_FRAME - ((SBI_TRAP_REGS_SIZE + 15) & ~15))
 #define KT_A0_SLOT(n)		(KT_SLOT(n) - KT_REGS)
 #if SBI_TRAP_REGS_t6 != 31 || SBI_TRAP_REGS_zero != 0
 #error sbi_trap_regs is no longer in register-number order
 #endif
+#endif
+
+#ifdef FW_FAST_RDTIME
+/*
+ * The rdtime fast path (FW_FAST_RDTIME), for a hart with no time CSR: an illegal-instruction trap from S or U whose
+ * instruction (mtval) is exactly `csrrs rd, time, x0` is answered here from the ACLINT mtime register, without the C
+ * part. That is sbi_timer_value(), which reads mtime with a 64-bit MMIO load when fw_fast_mtime_addr is set (cold
+ * init, 64-bit MMIO only; otherwise 0 and the full path runs). The same value and the same mepc + 4 as
+ * sbi_emulate_csr_read's CSR_TIME case; only the cost differs. Entered with sp = this hart's scratch, MSCRATCH = the
+ * interrupted sp, and t0 saved in KT_SLOT(0) by STORE. On a mismatch it restores t1 and t2 and falls through with t0
+ * clobbered (the caller reloads it). STORE/LOAD are STC/LDC with keep-tags (tags kept), sd/ld without.
+ */
+.macro FAST_RDTIME store, load, miss
+	csrr	t0, CSR_MCAUSE
+	addi	t0, t0, -CAUSE_ILLEGAL_INSTRUCTION
+	bnez	t0, \miss
+	\store	t1, KT_SLOT(6)
+	\store	t2, KT_SLOT(7)
+	csrr	t0, CSR_MTVAL
+	li	t1, 0xfffff07f
+	and	t1, t0, t1
+	li	t2, 0xc0102073
+	bne	t1, t2, 8f
+	lla	t1, fw_fast_mtime_addr
+	REG_L	t1, 0(t1)
+	beqz	t1, 8f
+	REG_L	t1, 0(t1)
+	srli	t0, t0, 7
+	andi	t0, t0, 31
+	slli	t0, t0, 3
+	lla	t2, 7f
+	add	t2, t2, t0
+	jr	t2
+	.option push
+	.option norvc
+	.balign 8
+7:	/* one 8-byte entry per rd: write t1 (mtime) into it, then 6f */
+	.irp n, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+	.if \n == 0
+	j	6f
+	nop
+	.elseif \n == 2
+	csrw	CSR_MSCRATCH, t1
+	j	6f
+	.elseif \n == 5
+	\store	t1, KT_SLOT(0)
+	j	6f
+	.elseif \n == 6
+	\store	t1, KT_SLOT(6)
+	j	6f
+	.elseif \n == 7
+	\store	t1, KT_SLOT(7)
+	j	6f
+	.else
+	addi	x\n, t1, 0
+	j	6f
+	.endif
+	.endr
+	.option pop
+6:	csrr	t0, CSR_MEPC
+	addi	t0, t0, 4
+	csrw	CSR_MEPC, t0
+	\load	t2, KT_SLOT(7)
+	\load	t1, KT_SLOT(6)
+	\load	t0, KT_SLOT(0)
+	csrrw	sp, CSR_MSCRATCH, sp
+	mret
+8:	\load	t2, KT_SLOT(7)
+	\load	t1, KT_SLOT(6)
+.endm
+.macro kt_stc_sp r, off
+	KT_STC(\r, sp, \off)
+.endm
+.macro kt_ldc_sp r, off
+	KT_LDC(\r, sp, \off)
+.endm
+.macro sd_sp r, off
+	sd	\r, \off(sp)
+.endm
+.macro ld_sp r, off
+	ld	\r, \off(sp)
+.endm
 #endif
 
 .macro	TRAP_SAVE_AND_SETUP_SP_T0
@@ -806,6 +888,10 @@ _trap_handler:
 	andi	t0, t0, PRV_M
 	addi	t0, t0, -PRV_M
 	beqz	t0, _trap_handler_from_m
+#ifdef FW_FAST_RDTIME
+	FAST_RDTIME kt_stc_sp, kt_ldc_sp, 9f
+9:
+#endif
 	.irp n, 1,3,4,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
 	KT_STC(x\n, sp, KT_SLOT(\n))
 	.endr
@@ -842,6 +928,25 @@ _trap_handler:
 
 _trap_handler_from_m:
 	KT_LDC(t0, sp, KT_SLOT(0))
+	csrrw	sp, CSR_MSCRATCH, sp
+#elif defined(FW_FAST_RDTIME)
+	/*
+	 * Stock entry with the rdtime fast path, plain sd/ld (no tags to keep). Here the C exception stack starts just
+	 * below the scratch, so nothing may be stored below it before the trap is known to come from S or U: t0 waits in
+	 * the scratch's own tmp0 (as TRAP_SAVE_AND_SETUP_SP_T0 uses it) until then. From S/U no C frame is live below
+	 * the scratch, and the fast path's slots are free.
+	 */
+	csrrw	sp, CSR_MSCRATCH, sp
+	REG_S	t0, SBI_SCRATCH_TMP0_OFFSET(sp)
+	csrr	t0, CSR_MSTATUS
+	srli	t0, t0, MSTATUS_MPP_SHIFT
+	andi	t0, t0, PRV_M
+	addi	t0, t0, -PRV_M
+	beqz	t0, 9f
+	REG_L	t0, SBI_SCRATCH_TMP0_OFFSET(sp)
+	sd	t0, KT_SLOT(0)(sp)
+	FAST_RDTIME sd_sp, ld_sp, 9f
+9:	REG_L	t0, SBI_SCRATCH_TMP0_OFFSET(sp)
 	csrrw	sp, CSR_MSCRATCH, sp
 #endif
 	TRAP_SAVE_AND_SETUP_SP_T0

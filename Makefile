@@ -330,6 +330,9 @@ endif
 ifeq ($(FW_CAPSTONE_KEEP_TAGS),y)
 GENFLAGS	+=	-DFW_CAPSTONE_KEEP_TAGS
 endif
+ifeq ($(FW_FAST_RDTIME),y)
+GENFLAGS	+=	-DFW_FAST_RDTIME
+endif
 GENFLAGS	+=	$(libsbiutils-genflags-y)
 GENFLAGS	+=	$(platform-genflags-y)
 GENFLAGS	+=	$(firmware-genflags-y)

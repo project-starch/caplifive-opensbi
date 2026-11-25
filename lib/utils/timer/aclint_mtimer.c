@@ -19,6 +19,16 @@
 
 static unsigned long mtimer_ptr_offset;
 
+#ifdef FW_FAST_RDTIME
+/* mtime's address for fw_base.S's rdtime fast path, or 0 for the full path */
+unsigned long fw_fast_mtime_addr;
+static inline struct aclint_mtimer_data *reference_or_self(struct aclint_mtimer_data *mt,
+							      struct aclint_mtimer_data *reference)
+{
+	return reference ? reference : mt;
+}
+#endif
+
 #define mtimer_get_hart_data_ptr(__scratch)				\
 	sbi_scratch_read_type((__scratch), void *, mtimer_ptr_offset)
 
@@ -233,6 +243,12 @@ int aclint_mtimer_cold_init(struct aclint_mtimer_data *mt,
 		/* Disable reading mtime when mtime is not available */
 		mtimer.timer_value = NULL;
 	}
+
+#ifdef FW_FAST_RDTIME
+	/* The trap entry's rdtime fast path (fw_base.S) reads mtime here directly, as mtimer_time_rd64 does. */
+	if (mt->mtime_size && mt->has_64bit_mmio && mt == reference_or_self(mt, reference))
+		fw_fast_mtime_addr = mt->mtime_addr;
+#endif
 
 	/* Add MTIMER regions to the root domain */
 	if (mt->mtime_addr == (mt->mtimecmp_addr + mt->mtimecmp_size)) {
