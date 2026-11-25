@@ -608,6 +608,23 @@ memmove:
 memcmp:
 	tail	sbi_memcmp
 
+#ifdef FW_CAPSTONE_KEEP_TAGS
+#if __riscv_xlen != 64
+#error FW_CAPSTONE_KEEP_TAGS needs RV64
+#endif
+#define KT_LDC(rd, base, off)	.insn i 0x5b, 3, rd, base, off
+#define KT_STC(src, base, off)	.insn s 0x5b, 4, src, off(base)
+/* x0..x31's 16-byte slots, below this hart's scratch (16-byte aligned, checked at boot) */
+#define KT_FRAME		(-512)
+#define KT_SLOT(n)		(KT_FRAME + 16 * (n))
+/* the integer frame the C part sees, below the slots, 16-byte aligned */
+#define KT_REGS			(KT_FRAME - ((SBI_TRAP_REGS_SIZE + 15) & ~15))
+#define KT_A0_SLOT(n)		(KT_SLOT(n) - KT_REGS)
+#if SBI_TRAP_REGS_t6 != 31 || SBI_TRAP_REGS_zero != 0
+#error sbi_trap_regs is no longer in register-number order
+#endif
+#endif
+
 .macro	TRAP_SAVE_AND_SETUP_SP_T0
 	/* Swap TP and MSCRATCH */
 	csrrw	tp, CSR_MSCRATCH, tp
@@ -762,6 +779,71 @@ memcmp:
 	.globl _trap_handler
 	.globl _trap_exit
 _trap_handler:
+#ifdef FW_CAPSTONE_KEEP_TAGS
+	/*
+	 * Capstone, the Sublet format with the trap route: a trap from S or U
+	 * keeps the tags of the interrupted registers (capstone-qemu
+	 * tests/machine-trap-tags, the protocol of its mtrap.S). A plain store
+	 * and load in M move a register's address and drop its tag, so a
+	 * kernel or a protected program that held a reference in a register
+	 * would get an integer back after the machine timer.
+	 *
+	 * csrrw keeps the tag of the value it swaps through MSCRATCH, and LDC
+	 * and STC in M take a plain base and keep the tag. The handler swaps
+	 * sp with MSCRATCH, so sp is this hart's scratch, and stores x1..x31
+	 * with STC into 16-byte slots just below the scratch (KT_SLOT). The C
+	 * part sees an ordinary integer frame below the slots. On exit a
+	 * register whose integer the C part changed gets that integer, which
+	 * STC writes untagged over its slot; then LDC loads every register.
+	 * Slot 0 (x0's) is the entry slot that frees t0, and a trap from M,
+	 * which carries no references (M is plain), uses only it and then
+	 * the unchanged path below.
+	 */
+	csrrw	sp, CSR_MSCRATCH, sp
+	KT_STC(t0, sp, KT_SLOT(0))
+	csrr	t0, CSR_MSTATUS
+	srli	t0, t0, MSTATUS_MPP_SHIFT
+	andi	t0, t0, PRV_M
+	addi	t0, t0, -PRV_M
+	beqz	t0, _trap_handler_from_m
+	.irp n, 1,3,4,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+	KT_STC(x\n, sp, KT_SLOT(\n))
+	.endr
+	KT_LDC(t0, sp, KT_SLOT(0))
+	KT_STC(t0, sp, KT_SLOT(5))
+	/* t0 = the interrupted sp with its tag, MSCRATCH = the scratch again */
+	csrrw	t0, CSR_MSCRATCH, sp
+	KT_STC(t0, sp, KT_SLOT(2))
+	REG_S	t0, (KT_REGS + SBI_TRAP_REGS_OFFSET(sp))(sp)
+	ld	t0, KT_SLOT(5)(sp)
+	REG_S	t0, (KT_REGS + SBI_TRAP_REGS_OFFSET(t0))(sp)
+	addi	sp, sp, KT_REGS
+
+	TRAP_SAVE_MEPC_MSTATUS 0
+
+	TRAP_SAVE_GENERAL_REGS_EXCEPT_SP_T0
+
+	TRAP_CALL_C_ROUTINE
+
+	/* a0 = the integer frame; slot n sits at a0 + KT_A0_SLOT(n) */
+	TRAP_RESTORE_MEPC_MSTATUS 0
+	.irp n, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+	ld	t0, (8 * \n)(a0)
+	ld	t1, KT_A0_SLOT(\n)(a0)
+	beq	t0, t1, 1f
+	KT_STC(t0, a0, KT_A0_SLOT(\n))
+1:
+	.endr
+	.irp n, 1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+	KT_LDC(x\n, a0, KT_A0_SLOT(\n))
+	.endr
+	KT_LDC(a0, a0, KT_A0_SLOT(10))
+	mret
+
+_trap_handler_from_m:
+	KT_LDC(t0, sp, KT_SLOT(0))
+	csrrw	sp, CSR_MSCRATCH, sp
+#endif
 	TRAP_SAVE_AND_SETUP_SP_T0
 
 	TRAP_SAVE_MEPC_MSTATUS 0

@@ -60,6 +60,9 @@ static void sbi_boot_print_banner(struct sbi_scratch *scratch)
 #endif
 
 	sbi_printf(BANNER);
+#ifdef FW_CAPSTONE_KEEP_TAGS
+	sbi_printf("Capstone: register tags kept across M traps, causes 24-30 delegated\n");
+#endif
 }
 
 static void sbi_boot_print_general(struct sbi_scratch *scratch)
@@ -271,6 +274,12 @@ static void __noreturn init_coldboot(struct sbi_scratch *scratch, u32 hartid)
 	rc = sbi_scratch_init(scratch);
 	if (rc)
 		sbi_hart_hang();
+
+#ifdef FW_CAPSTONE_KEEP_TAGS
+	/* The trap entry's STC slots sit just below each hart's scratch. */
+	if ((unsigned long)scratch & 15)
+		sbi_hart_hang();
+#endif
 
 	/* Note: This has to be second thing in coldboot init sequence */
 	rc = sbi_heap_init(scratch);

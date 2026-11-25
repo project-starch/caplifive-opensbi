@@ -327,6 +327,9 @@ endif
 ifdef PLATFORM
 GENFLAGS	+=	-include $(KCONFIG_AUTOHEADER)
 endif
+ifeq ($(FW_CAPSTONE_KEEP_TAGS),y)
+GENFLAGS	+=	-DFW_CAPSTONE_KEEP_TAGS
+endif
 GENFLAGS	+=	$(libsbiutils-genflags-y)
 GENFLAGS	+=	$(platform-genflags-y)
 GENFLAGS	+=	$(firmware-genflags-y)

@@ -225,6 +225,14 @@ static int delegate_traps(struct sbi_scratch *scratch)
 		exceptions |= (1U << CAUSE_STORE_GUEST_PAGE_FAULT);
 	}
 
+#ifdef FW_CAPSTONE_KEEP_TAGS
+	/*
+	 * Capstone's capability causes 24 to 30 go to the kernel in S, which
+	 * answers its own and its tasks' faults (capstone-qemu csr.c
+	 * CAPSTONE_DELEGABLE_EXCPS; the RTL's medeleg mask, Q-24).
+	 */
+	exceptions |= 0x7fUL << 24;
+#endif
 	csr_write(CSR_MIDELEG, interrupts);
 	csr_write(CSR_MEDELEG, exceptions);
 
